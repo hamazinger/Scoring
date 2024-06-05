@@ -9,18 +9,17 @@ from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
 
-
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
-# 変数の設定
-project_id = 'mythical-envoy-386309'
-destination_table = 'mythical-envoy-386309.majisemi.majisemi_followdata'
-credentials_path = '/Users/hamadatomotsugu/MyPython/maji/mythical-envoy-386309-4ea9e2e73223.json'
-font_path = '/Users/hamadatomotsugu/Downloads/Noto_Sans_JP/static/NotoSansJP-Regular.ttf'  # 日本語フォントのパス
+# GCPプロジェクトIDとBigQueryのテーブル情報をStreamlit Secretsに設定
+project_id = st.secrets["gcp_project_id"] 
+destination_table = st.secrets["bq_table_id"]
 
 # 認証情報の設定
-credentials = service_account.Credentials.from_service_account_file(credentials_path)
+credentials = service_account.Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"]
+)
 client = bigquery.Client(credentials=credentials, project=project_id)
 
 # ユーザーがキーワードを入力できるようにする
@@ -33,7 +32,7 @@ three_months_ago = today - timedelta(days=365)
 # マジセミ株式会社が主催したセミナーに参加した企業リストを取得するクエリ
 attendee_query = f"""
 SELECT DISTINCT Company_Name
-FROM {destination_table}
+FROM `{destination_table}`
 WHERE Organizer_Name LIKE '%{organizer_keyword}%'
 """
 # クエリ実行
@@ -45,10 +44,10 @@ filtered_companies = attendee_df['Company_Name'].dropna().unique().tolist()
 # クォートされた企業名のリストを生成
 quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
 
-# 過去3ヶ月間のセミナーのみを対象とするSQLクエリを修正
+# 過去3ヶ月間のセミナーのみを対象とするSQLクエリ
 all_seminars_query = f"""
 SELECT *
-FROM {destination_table}
+FROM `{destination_table}`
 WHERE Company_Name IN ({quoted_companies})
 AND Seminar_Date >= '{three_months_ago.strftime('%Y-%m-%d')}'
 ORDER BY Company_Name, Seminar_Date
@@ -125,4 +124,4 @@ for company in top3_companies['Company_Name']:
     # 企業ごとのセミナータイトルを取得
     seminar_titles = ' '.join(all_seminars_df[all_seminars_df['Company_Name'] == company]['Seminar_Title'])
     # ワードクラウドを生成
-    generate_wordcloud(seminar_titles, font_path, f'{company}のセミナータイトルワードクラウド')
+    generate_wordcloud('NotoSansJP-Regular.ttf', font_path, f'{company}のセミナータイトルワードクラウド')
