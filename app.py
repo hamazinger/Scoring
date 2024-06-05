@@ -25,13 +25,7 @@ client = bigquery.Client(credentials=credentials, project=project_id)
 # BigQueryからデータを取得する関数
 @st.cache(ttl=600)
 def run_query(query, params=None):
-    # ScalarQueryParameterオブジェクトのリストを作成
-    if params:
-        query_params = [bigquery.ScalarQueryParameter(None, "STRING", param) for param in params]
-    else:
-        query_params = None
-    
-    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=query_params))
+    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=params))
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
     return rows
@@ -167,10 +161,12 @@ if execute_button:
         FROM `{destination_table}`
         WHERE Organizer_Name LIKE %s AND {where_clause}
         """
-        attendee_data = run_query(attendee_query, (f"%{organizer_keyword}%",))
+        attendee_data = run_query(attendee_query, [bigquery.ScalarQueryParameter(None, "STRING", f"%{organizer_keyword}%")])  # パラメータをリストで渡す
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
+
+    
 
     # None値をフィルタリングして企業名のリストを生成
     filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
