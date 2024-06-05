@@ -7,6 +7,8 @@ from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
 from datetime import datetime, timedelta
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+import pandas as pd
 
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
@@ -37,26 +39,76 @@ def run_query(query, params=None):
 # ユーザーがキーワードを入力できるようにする
 organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "") # 初期値を空にする
 
-# 業種選択のマルチセレクトボックスを追加
-selected_industries = st.multiselect(
-    "業種を選択してください",
-    [
-        "IT関連企業", 
-        "製造", 
-        "商社", 
-        "通信・キャリア・データセンター", 
-        "建設・土木・設備工事", 
-        "小売", 
-        "マーケティング・広告・出版・印刷", 
-        "金融", 
-        "不動産・ビル管理・セキュリティ", 
-        "教育", 
-        "医療・福祉・介護サービス", 
-        "運輸", 
-        "人材派遣・人材紹介", 
-        "その他"
-    ],
+# --- 業種選択 ---
+industries = [
+    {"業種": "IT関連企業"},
+    {"業種": "製造"},
+    {"業種": "商社"},
+    {"業種": "通信・キャリア・データセンター"},
+    {"業種": "建設・土木・設備工事"},
+    {"業種": "小売"},
+    {"業種": "マーケティング・広告・出版・印刷"},
+    {"業種": "金融"},
+    {"業種": "不動産・ビル管理・セキュリティ"},
+    {"業種": "教育"},
+    {"業種": "医療・福祉・介護サービス"},
+    {"業種": "運輸"},
+    {"業種": "人材派遣・人材紹介"},
+    {"業種": "その他"},
+]
+gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
+gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+grid_options_industries = gb.build()
+st.subheader("業種を選択してください")
+selected_rows_industries = AgGrid(
+    pd.DataFrame(industries),
+    gridOptions=grid_options_industries,
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
 )
+selected_industries = [row["業種"] for row in selected_rows_industries["selected_rows"]]
+
+# --- 従業員規模選択 ---
+employee_sizes = [
+    {"従業員規模": "5000人以上"},
+    {"従業員規模": "1000人以上5000人未満"},
+    {"従業員規模": "500人以上1000人未満"},
+    {"従業員規模": "300人以上500人未満"},
+    {"従業員規模": "100人以上300人未満"},
+    {"従業員規模": "30人以上100人未満"},
+    {"従業員規模": "10人以上30人未満"},
+    {"従業員規模": "10人未満"},
+    {"従業員規模": "分からない"},
+]
+gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
+gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+grid_options_employee_sizes = gb.build()
+st.subheader("従業員規模を選択してください")
+selected_rows_employee_sizes = AgGrid(
+    pd.DataFrame(employee_sizes),
+    gridOptions=grid_options_employee_sizes,
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+)
+selected_employee_sizes = [row["従業員規模"] for row in selected_rows_employee_sizes["selected_rows"]]
+
+# --- 役職選択 ---
+positions = [
+    {"役職": "経営者・役員クラス"},
+    {"役職": "事業部長/工場長クラス"},
+    {"役職": "部長クラス"},
+    {"役職": "課長クラス"},
+    {"役職": "係長・主任クラス"},
+    {"役職": "一般社員・職員クラス"},
+]
+gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
+gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+grid_options_positions = gb.build()
+st.subheader("役職を選択してください")
+selected_rows_positions = AgGrid(
+    pd.DataFrame(positions),
+    gridOptions=grid_options_positions,
+    update_mode=GridUpdateMode.SELECTION_CHANGED,
+)
+selected_positions = [row["役職"] for row in selected_rows_positions["selected_rows"]]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -67,23 +119,34 @@ if execute_button:
     today = datetime.today()
     three_months_ago = today - timedelta(days=365)
 
-    # 選択された業種に基づいてクエリを変更
+    # 選択された項目に基づいてクエリを変更
+    where_clauses = []
     if selected_industries:
         industry_conditions = " OR ".join([f"Industry = '{industry}'" for industry in selected_industries])
+        where_clauses.append(f"({industry_conditions})")
+    if selected_employee_sizes:
+        employee_size_conditions = " OR ".join([f"Employee_Size = '{size}'" for size in selected_employee_sizes])
+        where_clauses.append(f"({employee_size_conditions})")
+    if selected_positions:
+        position_conditions = " OR ".join([f"Position_Category = '{position}'" for position in selected_positions])
+        where_clauses.append(f"({position_conditions})")
+
+    # WHERE句を構築
+    if where_clauses:
+        where_clause = " AND ".join(where_clauses)
         attendee_query = f"""
         SELECT DISTINCT Company_Name
         FROM `{destination_table}`
-        WHERE Organizer_Name LIKE %s AND ({industry_conditions})
+        WHERE Organizer_Name LIKE %s AND {where_clause}
         """
-        # クエリ実行時にパラメータを指定
         attendee_data = run_query(attendee_query, (f"%{organizer_keyword}%",))
     else:
-        st.warning("業種を一つ以上選択してください。")
-        attendee_data = []  # 業種が選択されていない場合は空のリスト
+        st.warning("業種、従業員規模、役職のいずれかを選択してください。")
+        attendee_data = []
 
     # None値をフィルタリングして企業名のリストを生成
     filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
-    filtered_companies = list(set(filtered_companies)) # 重複を削除
+    filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     # IN句が空の場合の処理を追加
     if filtered_companies:
