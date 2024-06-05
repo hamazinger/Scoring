@@ -1,0 +1,12 @@
+streamlit
+numpy
+scipy
+google-cloud-bigquery
+pandas
+google-auth
+pytrends
+matplotlib
+japanize_matplotlib
+openai
+wordcloud
+janome
