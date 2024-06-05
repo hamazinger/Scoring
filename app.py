@@ -31,7 +31,7 @@ def run_query(query, params=None):
     return rows
 
 # ユーザーがキーワードを入力できるようにする
-organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "") # 初期値を空にする
+organizer_keyword = st.text_input("主催企業名を入力してください：", "") # 初期値を空にする
 
 # カテゴリ選択を横に3つ並べる
 col1, col2, col3 = st.columns(3)
