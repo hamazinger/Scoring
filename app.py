@@ -9,6 +9,7 @@ from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
 
+
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
