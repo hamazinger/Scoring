@@ -13,7 +13,7 @@ import re
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
 # GCPプロジェクトIDとBigQueryのテーブル情報をStreamlit Secretsに設定
-project_id = st.secrets["gcp_project_id"] 
+project_id = st.secrets["project_id"] 
 destination_table = st.secrets["bq_table_id"]
 
 # 認証情報の設定
