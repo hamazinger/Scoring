@@ -11,3 +11,4 @@ openai
 wordcloud
 janome
 db-dtypes>=1.0.0
+st_aggrid
