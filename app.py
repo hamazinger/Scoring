@@ -69,14 +69,14 @@ with col1:
 # --- 従業員規模選択 ---
 with col2:
     employee_sizes = [
-        {"Employee_Size": "1. 5000人以上"},
-        {"Employee_Size": "2. 1000人以上5000人未満"},
-        {"Employee_Size": "3. 500人以上1000人未満"},
-        {"Employee_Size": "4. 300人以上500人未満"},
-        {"Employee_Size": "5. 100人以上300人未満"},
-        {"Employee_Size": "6. 30人以上100人未満"},
-        {"Employee_Size": "7. 10人以上30人未満"},
-        {"Employee_Size": "8. 10人未満"},
+        {"Employee_Size": "5000人以上"},
+        {"Employee_Size": "1000人以上5000人未満"},
+        {"Employee_Size": "500人以上1000人未満"},
+        {"Employee_Size": "300人以上500人未満"},
+        {"Employee_Size": "100人以上300人未満"},
+        {"Employee_Size": "30人以上100人未満"},
+        {"Employee_Size": "10人以上30人未満"},
+        {"Employee_Size": "10人未満"},
         # {"Employee_Size": "分からない"}, # 不要な選択肢を削除
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
@@ -98,13 +98,13 @@ with col2:
 # --- 役職選択 ---
 with col3:
     positions = [
-        {"Position_Category": "1. 経営者・役員クラス"},
-        {"Position_Category": "2. 事業部長/工場長クラス"},
-        {"Position_Category": "3. 部長クラス"},
-        {"Position_Category": "4. 課長クラス"},
-        {"Position_Category": "5. 係長・主任クラス"},
-        {"Position_Category": "6. 一般社員・職員クラス"},
-        # {"Position_Category": "7. その他"}, # 不要な選択肢を削除
+        {"Position_Category": "経営者・役員クラス"},
+        {"Position_Category": "事業部長/工場長クラス"},
+        {"Position_Category": "部長クラス"},
+        {"Position_Category": "課長クラス"},
+        {"Position_Category": "係長・主任クラス"},
+        {"Position_Category": "一般社員・職員クラス"},
+        # {"Position_Category": "その他"}, # 不要な選択肢を削除
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
@@ -135,18 +135,17 @@ if execute_button:
     where_clauses = []
     if selected_industries:
         # IT関連企業をまとめるための条件を追加
-        it_related_condition = " OR ".join([f"User_Company = '{i}'" for i in selected_industries if i.startswith(('10.', '11.', '12.', '13.'))])
-        industry_conditions = " OR ".join([f"User_Company = '{industry}'" for industry in selected_industries if not industry.startswith(('10.', '11.', '12.', '13.'))])
+        it_related_condition = " OR ".join([f"User_Company = '{i}'" for i in selected_industries if i in ["システム・インテグレータ", "IT・ビジネスコンサルティング", "IT関連製品販売", "SaaS・Webサービス事業", "その他ITサービス関連"]])
+        industry_conditions = " OR ".join([f"User_Company = '{industry}'" for industry in selected_industries if industry not in ["システム・インテグレータ", "IT・ビジネスコンサルティング", "IT関連製品販売", "SaaS・Webサービス事業", "その他ITサービス関連"]])
         if industry_conditions:
             where_clauses.append(f"({industry_conditions} OR ({it_related_condition}))")
         else:
             where_clauses.append(f"({it_related_condition})")
-
     if selected_employee_sizes:
-        employee_size_conditions = " OR ".join([f"Employee_Size = '{size}'" for size in selected_employee_sizes])
+        employee_size_conditions = " OR ".join([f"Employee_Size = '{str(i+1)}. {size}'" for i, size in enumerate(selected_employee_sizes)]) # 通番を付与
         where_clauses.append(f"({employee_size_conditions})")
     if selected_positions:
-        position_conditions = " OR ".join([f"Position_Category = '{position}'" for position in selected_positions])
+        position_conditions = " OR ".join([f"Position_Category = '{str(i+1)}. {position}'" for i, position in enumerate(selected_positions)]) # 通番を付与
         where_clauses.append(f"({position_conditions})")
 
     # WHERE句を構築
@@ -162,6 +161,8 @@ if execute_button:
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
+
+    
 
     # None値をフィルタリングして企業名のリストを生成
     filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
