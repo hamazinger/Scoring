@@ -12,8 +12,8 @@ import re
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
-# BigQueryのテーブル情報をStreamlit Secretsに設定
-destination_table = st.secrets["bq_table_id"]
+# テーブルIDを直接指定
+destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata" 
 
 # 認証情報の設定
 service_account_info = st.secrets["gcp_service_account"]
@@ -31,7 +31,7 @@ three_months_ago = today - timedelta(days=365)
 # マジセミ株式会社が主催したセミナーに参加した企業リストを取得するクエリ
 attendee_query = f"""
 SELECT DISTINCT Company_Name
-FROM `{destination_table}`
+FROM `{destination_table}` 
 WHERE Organizer_Name LIKE '%{organizer_keyword}%'
 """
 # クエリ実行
