@@ -1,8 +1,6 @@
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
-import pandas as pd
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import japanize_matplotlib
 from wordcloud import WordCloud
@@ -12,7 +10,7 @@ import re
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
-# テーブルIDを直接指定
+# テーブルIDを直接指定 (Secretsの問題が解決したら、Secretsから取得するように戻してください)
 destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata" 
 
 # 認証情報の設定
@@ -20,6 +18,14 @@ service_account_info = st.secrets["gcp_service_account"]
 credentials = service_account.Credentials.from_service_account_info(service_account_info)
 project_id = service_account_info["project_id"] 
 client = bigquery.Client(credentials=credentials, project=project_id)
+
+# BigQueryからデータを取得する関数
+@st.cache(ttl=600)
+def run_query(query):
+    query_job = client.query(query)
+    rows_raw = query_job.result()
+    rows = [dict(row) for row in rows_raw]
+    return rows
 
 # ユーザーがキーワードを入力できるようにする
 organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "Aiven")
@@ -31,14 +37,15 @@ three_months_ago = today - timedelta(days=365)
 # マジセミ株式会社が主催したセミナーに参加した企業リストを取得するクエリ
 attendee_query = f"""
 SELECT DISTINCT Company_Name
-FROM `{destination_table}` 
+FROM `{destination_table}`
 WHERE Organizer_Name LIKE '%{organizer_keyword}%'
 """
 # クエリ実行
-attendee_df = client.query(attendee_query).to_dataframe()
+attendee_data = run_query(attendee_query) # DataFrameに変換しない
 
 # None値をフィルタリングして企業名のリストを生成
-filtered_companies = attendee_df['Company_Name'].dropna().unique().tolist()
+filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
+filtered_companies = list(set(filtered_companies)) # 重複を削除
 
 # クォートされた企業名のリストを生成
 quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
@@ -53,7 +60,7 @@ ORDER BY Company_Name, Seminar_Date
 """
 
 # クエリ実行
-all_seminars_df = client.query(all_seminars_query).to_dataframe()
+all_seminars_data = run_query(all_seminars_query) # DataFrameに変換しない
 
 # スコア計算関数
 def calculate_score(row):
@@ -77,18 +84,24 @@ def calculate_score(row):
         score += 1
     return score
 
-# スコアリング関数をデータフレームに適用
-all_seminars_df['score'] = all_seminars_df.apply(calculate_score, axis=1)
+# スコアを計算し、辞書に格納
+company_scores = {}
+for row in all_seminars_data:
+    company_name = row['Company_Name']
+    score = calculate_score(row)
+    if company_name in company_scores:
+        company_scores[company_name] += score
+    else:
+        company_scores[company_name] = score
 
-# 会社名ごとにスコアを集計
-company_scores = all_seminars_df.groupby('Company_Name')['score'].sum().reset_index()
+# スコアの高い順にソート
+sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
 
-# スコアの高い順にソートしてトップ3を取得
-top3_companies = company_scores.sort_values('score', ascending=False).head(3)
-
-# 結果の表示
+# トップ3企業を表示
 st.header("トップ3企業:")
-st.dataframe(top3_companies)
+for i in range(3):
+    company_name, score = sorted_scores[i]
+    st.write(f"{i+1}. {company_name}: {score}点")
 
 # 形態素解析とワードクラウド生成
 def generate_wordcloud(font_path, text, title):
@@ -119,8 +132,9 @@ def generate_wordcloud(font_path, text, title):
 
 # トップ3企業のセミナータイトルからワードクラウドを作成
 st.header("セミナータイトルワードクラウド")
-for company in top3_companies['Company_Name']:
+for i in range(3):
+    company_name, _ = sorted_scores[i]
     # 企業ごとのセミナータイトルを取得
-    seminar_titles = ' '.join(all_seminars_df[all_seminars_df['Company_Name'] == company]['Seminar_Title'])
+    seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
     # ワードクラウドを生成
-    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company}のセミナータイトルワードクラウド')
+    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
