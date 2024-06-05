@@ -12,14 +12,13 @@ import re
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
-# GCPプロジェクトIDとBigQueryのテーブル情報をStreamlit Secretsに設定
-project_id = st.secrets["project_id"] 
+# BigQueryのテーブル情報をStreamlit Secretsに設定
 destination_table = st.secrets["bq_table_id"]
 
 # 認証情報の設定
-credentials = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
-)
+service_account_info = st.secrets["gcp_service_account"]
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
+project_id = service_account_info["project_id"] 
 client = bigquery.Client(credentials=credentials, project=project_id)
 
 # ユーザーがキーワードを入力できるようにする
@@ -92,7 +91,7 @@ st.header("トップ3企業:")
 st.dataframe(top3_companies)
 
 # 形態素解析とワードクラウド生成
-def generate_wordcloud(text, font_path, title):
+def generate_wordcloud(font_path, text, title):
     t = Tokenizer()
     tokens = t.tokenize(text)
     words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
@@ -124,4 +123,4 @@ for company in top3_companies['Company_Name']:
     # 企業ごとのセミナータイトルを取得
     seminar_titles = ' '.join(all_seminars_df[all_seminars_df['Company_Name'] == company]['Seminar_Title'])
     # ワードクラウドを生成
-    generate_wordcloud('NotoSansJP-Regular.ttf', font_path, f'{company}のセミナータイトルワードクラウド')
+    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company}のセミナータイトルワードクラウド')
