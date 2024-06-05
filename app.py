@@ -23,7 +23,13 @@ client = bigquery.Client(credentials=credentials, project=project_id)
 # BigQueryからデータを取得する関数
 @st.cache(ttl=600)
 def run_query(query, params=None):
-    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=params))
+    # ScalarQueryParameterオブジェクトのリストを作成
+    if params:
+        query_params = [bigquery.ScalarQueryParameter(None, "STRING", param) for param in params]
+    else:
+        query_params = None
+    
+    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=query_params))
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
     return rows
