@@ -39,25 +39,20 @@ col1, col2, col3 = st.columns(3)
 # --- 業種選択 ---
 with col1:
     industries = [
-        {"User_Company": "1. 製造"},
-        {"User_Company": "2. 通信キャリア・データセンター"},
-        {"User_Company": "3. 商社"},
-        {"User_Company": "4. 小売"},
-        {"User_Company": "5. 金融"},
-        {"User_Company": "6. 建設・土木・設備工事"},
-        {"User_Company": "7. マーケティング・広告・出版・印刷"},
-        {"User_Company": "8. 教育"},
-        # {"User_Company": "9. その他"}, # 不要な選択肢を削除
-        {"User_Company": "10. システム・インテグレータ"},
-        {"User_Company": "11. IT・ビジネスコンサルティング"},
-        {"User_Company": "12. IT関連製品販売"},
-        {"User_Company": "13. IT関連製品販売"},
-        {"User_Company": "14. SaaS・Webサービス事業"},
-        {"User_Company": "15. その他ITサービス関連"},
+        {"User_Company": "製造"},
+        {"User_Company": "通信キャリア・データセンター"},
+        {"User_Company": "商社"},
+        {"User_Company": "小売"},
+        {"User_Company": "金融"},
+        {"User_Company": "建設・土木・設備工事"},
+        {"User_Company": "マーケティング・広告・出版・印刷"},
+        {"User_Company": "教育"},
+        # {"User_Company": "その他"}, # 不要な選択肢を削除
+        {"User_Company": "IT関連企業"}, # IT関連企業をまとめる
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
+    gb.configure_grid_options(domLayout='normal', headerHeight=0) # ヘッダーを非表示にする
     grid_options_industries = gb.build()
     st.subheader("業種")
     selected_rows_industries = AgGrid(
@@ -86,7 +81,7 @@ with col2:
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
+    gb.configure_grid_options(domLayout='normal', headerHeight=0) # ヘッダーを非表示にする
     grid_options_employee_sizes = gb.build()
     st.subheader("従業員規模") 
     selected_rows_employee_sizes = AgGrid(
@@ -113,7 +108,7 @@ with col3:
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
+    gb.configure_grid_options(domLayout='normal', headerHeight=0) # ヘッダーを非表示にする
     grid_options_positions = gb.build()
     st.subheader("役職") 
     selected_rows_positions = AgGrid(
@@ -146,6 +141,7 @@ if execute_button:
             where_clauses.append(f"({industry_conditions} OR ({it_related_condition}))")
         else:
             where_clauses.append(f"({it_related_condition})")
+
     if selected_employee_sizes:
         employee_size_conditions = " OR ".join([f"Employee_Size = '{size}'" for size in selected_employee_sizes])
         where_clauses.append(f"({employee_size_conditions})")
@@ -161,12 +157,11 @@ if execute_button:
         FROM `{destination_table}`
         WHERE Organizer_Name LIKE %s AND {where_clause}
         """
-        attendee_data = run_query(attendee_query, [bigquery.ScalarQueryParameter(None, "STRING", f"%{organizer_keyword}%")])  # パラメータをリストで渡す
+        # クエリ実行時にパラメータを指定
+        attendee_data = run_query(attendee_query, [bigquery.ScalarQueryParameter(None, "STRING", f"%{organizer_keyword}%")])
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
-
-    
 
     # None値をフィルタリングして企業名のリストを生成
     filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
