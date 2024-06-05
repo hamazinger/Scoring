@@ -65,7 +65,7 @@ selected_rows_industries = AgGrid(
     gridOptions=grid_options_industries,
     update_mode=GridUpdateMode.SELECTION_CHANGED,
 )
-selected_industries = [row["業種"] for row in selected_rows_industries["selected_rows"]]
+selected_industries = [row["業種"] for row in selected_rows_industries["data"]] # "data"を使用
 
 # --- 従業員規模選択 ---
 employee_sizes = [
@@ -88,7 +88,7 @@ selected_rows_employee_sizes = AgGrid(
     gridOptions=grid_options_employee_sizes,
     update_mode=GridUpdateMode.SELECTION_CHANGED,
 )
-selected_employee_sizes = [row["従業員規模"] for row in selected_rows_employee_sizes["selected_rows"]]
+selected_employee_sizes = [row["従業員規模"] for row in selected_rows_employee_sizes["data"]] # "data"を使用
 
 # --- 役職選択 ---
 positions = [
@@ -108,7 +108,7 @@ selected_rows_positions = AgGrid(
     gridOptions=grid_options_positions,
     update_mode=GridUpdateMode.SELECTION_CHANGED,
 )
-selected_positions = [row["役職"] for row in selected_rows_positions["selected_rows"]]
+selected_positions = [row["役職"] for row in selected_rows_positions["data"]] # "data"を使用
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
