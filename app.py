@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import japanize_matplotlib
 from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
+from datetime import datetime, timedelta
 import re
 
 # Streamlitアプリのタイトルを設定
