@@ -39,76 +39,82 @@ def run_query(query, params=None):
 # ユーザーがキーワードを入力できるようにする
 organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "") # 初期値を空にする
 
+# カテゴリ選択を横に3つ並べる
+col1, col2, col3 = st.columns(3)
+
 # --- 業種選択 ---
-industries = [
-    {"業種": "IT関連企業"},
-    {"業種": "製造"},
-    {"業種": "商社"},
-    {"業種": "通信・キャリア・データセンター"},
-    {"業種": "建設・土木・設備工事"},
-    {"業種": "小売"},
-    {"業種": "マーケティング・広告・出版・印刷"},
-    {"業種": "金融"},
-    {"業種": "不動産・ビル管理・セキュリティ"},
-    {"業種": "教育"},
-    {"業種": "医療・福祉・介護サービス"},
-    {"業種": "運輸"},
-    {"業種": "人材派遣・人材紹介"},
-    {"業種": "その他"},
-]
-gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
-gb.configure_selection(selection_mode="multiple", use_checkbox=True)
-grid_options_industries = gb.build()
-st.subheader("業種を選択してください")
-selected_rows_industries = AgGrid(
-    pd.DataFrame(industries),
-    gridOptions=grid_options_industries,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-)
-selected_industries = selected_rows_industries["data"]["業種"].tolist()
+with col1:
+    industries = [
+        {"業種": "IT関連企業"},
+        {"業種": "製造"},
+        {"業種": "商社"},
+        {"業種": "通信・キャリア・データセンター"},
+        {"業種": "建設・土木・設備工事"},
+        {"業種": "小売"},
+        {"業種": "マーケティング・広告・出版・印刷"},
+        {"業種": "金融"},
+        {"業種": "不動産・ビル管理・セキュリティ"},
+        {"業種": "教育"},
+        {"業種": "医療・福祉・介護サービス"},
+        {"業種": "運輸"},
+        {"業種": "人材派遣・人材紹介"},
+        {"業種": "その他"},
+    ]
+    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+    grid_options_industries = gb.build()
+    st.subheader("業種を選択してください")
+    selected_rows_industries = AgGrid(
+        pd.DataFrame(industries),
+        gridOptions=grid_options_industries,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+    )
+    selected_industries = selected_rows_industries["data"]["業種"].tolist()
 
 # --- 従業員規模選択 ---
-employee_sizes = [
-    {"従業員規模": "5000人以上"},
-    {"従業員規模": "1000人以上5000人未満"},
-    {"従業員規模": "500人以上1000人未満"},
-    {"従業員規模": "300人以上500人未満"},
-    {"従業員規模": "100人以上300人未満"},
-    {"従業員規模": "30人以上100人未満"},
-    {"従業員規模": "10人以上30人未満"},
-    {"従業員規模": "10人未満"},
-    {"従業員規模": "分からない"},
-]
-gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
-gb.configure_selection(selection_mode="multiple", use_checkbox=True)
-grid_options_employee_sizes = gb.build()
-st.subheader("従業員規模を選択してください")
-selected_rows_employee_sizes = AgGrid(
-    pd.DataFrame(employee_sizes),
-    gridOptions=grid_options_employee_sizes,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-)
-selected_employee_sizes = selected_rows_employee_sizes["data"]["従業員規模"].tolist()
+with col2:
+    employee_sizes = [
+        {"従業員規模": "5000人以上"},
+        {"従業員規模": "1000人以上5000人未満"},
+        {"従業員規模": "500人以上1000人未満"},
+        {"従業員規模": "300人以上500人未満"},
+        {"従業員規模": "100人以上300人未満"},
+        {"従業員規模": "30人以上100人未満"},
+        {"従業員規模": "10人以上30人未満"},
+        {"従業員規模": "10人未満"},
+        {"従業員規模": "分からない"},
+    ]
+    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+    grid_options_employee_sizes = gb.build()
+    st.subheader("従業員規模を選択してください")
+    selected_rows_employee_sizes = AgGrid(
+        pd.DataFrame(employee_sizes),
+        gridOptions=grid_options_employee_sizes,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+    )
+    selected_employee_sizes = selected_rows_employee_sizes["data"]["従業員規模"].tolist()
 
 # --- 役職選択 ---
-positions = [
-    {"役職": "経営者・役員クラス"},
-    {"役職": "事業部長/工場長クラス"},
-    {"役職": "部長クラス"},
-    {"役職": "課長クラス"},
-    {"役職": "係長・主任クラス"},
-    {"役職": "一般社員・職員クラス"},
-]
-gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
-gb.configure_selection(selection_mode="multiple", use_checkbox=True)
-grid_options_positions = gb.build()
-st.subheader("役職を選択してください")
-selected_rows_positions = AgGrid(
-    pd.DataFrame(positions),
-    gridOptions=grid_options_positions,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-)
-selected_positions = selected_rows_positions["data"]["役職"].tolist()
+with col3:
+    positions = [
+        {"役職": "経営者・役員クラス"},
+        {"役職": "事業部長/工場長クラス"},
+        {"役職": "部長クラス"},
+        {"役職": "課長クラス"},
+        {"役職": "係長・主任クラス"},
+        {"役職": "一般社員・職員クラス"},
+    ]
+    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+    grid_options_positions = gb.build()
+    st.subheader("役職を選択してください")
+    selected_rows_positions = AgGrid(
+        pd.DataFrame(positions),
+        gridOptions=grid_options_positions,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+    )
+    selected_positions = selected_rows_positions["data"]["役職"].tolist()
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
