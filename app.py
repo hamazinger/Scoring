@@ -11,7 +11,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
 import pandas as pd
 
 # Streamlitアプリのタイトルを設定
-st.title("マジセミリードスコアリング＆ワードクラウド")
+st.title("リードスコアリング")
 
 # テーブルIDを直接指定 (Secretsの問題が解決したら、Secretsから取得するように戻してください)
 destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
