@@ -10,3 +10,4 @@ japanize_matplotlib
 openai
 wordcloud
 janome
+db-dtypes>=1.0.0
