@@ -168,7 +168,9 @@ if execute_button:
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
-        quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
+        quoted_companies =
+
+ ", ".join([f"'{company}'" for company in filtered_companies])
 
         all_seminars_query = f"""
         SELECT *
@@ -191,62 +193,63 @@ if execute_button:
             if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
                 score += 3
             if row.get('Desired_Follow_Up_Actions') is not None:
-                if '製品やサービス導入に関する具体的な要望がある' in row[‘Desired_Follow_Up_Actions’]:
+                if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
                     score += 5
-                elif ‘資料希望’ in row[‘Desired_Follow_Up_Actions’]:
+                elif '資料希望' in row['Desired_Follow_Up_Actions']:
                     score += 3
-                if row.get(‘Pre_Seminar_Survey_Answer_2’) == ‘既に同様の商品・サービスを導入済み’:
-                    score += 3
-                elif row.get(‘Pre_Seminar_Survey_Answer_2’) == ‘既に候補の製品・サービスを絞っており、その評価・選定をしている’:
-                    score += 3
-                elif row.get(‘Pre_Seminar_Survey_Answer_2’) == ‘製品・サービスの候補を探している’:
-                    score += 2
-                elif row.get(‘Pre_Seminar_Survey_Answer_2’) == ‘導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）’:
-                    score += 1
-                return score
-                company_scores = {}
-    for row in all_seminars_data:
-        company_name = row['Company_Name']
-        score = calculate_score(row)
-        if company_name in company_scores:
-            company_scores[company_name] += score
-        else:
-            company_scores[company_name] = score
+            if row.get('Pre_Seminar_Survey_Answer_2') == '既に同様の商品・サービスを導入済み':
+                score += 3
+            elif row.get('Pre_Seminar_Survey_Answer_2') == '既に候補の製品・サービスを絞っており、その評価・選定をしている':
+                score += 3
+            elif row.get('Pre_Seminar_Survey_Answer_2') == '製品・サービスの候補を探している':
+                score += 2
+            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）':
+                score += 1
+            return score
 
-    sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
+        company_scores = {}
+        for row in all_seminars_data:
+            company_name = row['Company_Name']
+            score = calculate_score(row)
+            if company_name in company_scores:
+                company_scores[company_name] += score
+            else:
+                company_scores[company_name] = score
 
-    st.header("トップ3企業:")
-    for i in range(min(3, len(sorted_scores))):
-        company_name, score = sorted_scores[i]
-        st.write(f"{i + 1}. {company_name}: {score}点")
+        sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
 
-    def generate_wordcloud(font_path, text, title):
-        t = Tokenizer()
-        tokens = t.tokenize(text)
-        words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
+        st.header("トップ3企業:")
+        for i in range(min(3, len(sorted_scores))):
+            company_name, score = sorted_scores[i]
+            st.write(f"{i + 1}. {company_name}: {score}点")
 
-        words = [word for word in words if len(word) > 1]
-        words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
-        words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
+        def generate_wordcloud(font_path, text, title):
+            t = Tokenizer()
+            tokens = t.tokenize(text)
+            words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
 
-        exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
-                         '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査',
-                         '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
-        words = [word for word in words if word not in exclude_words]
+            words = [word for word in words if len(word) > 1]
+            words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
+            words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
 
-        wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
+            exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
+                             '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査',
+                             '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+            words = [word for word in words if word not in exclude_words]
 
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.imshow(wordcloud, interpolation='bilinear')
-        ax.set_title(title)
-        ax.axis('off')
-        st.pyplot(fig)
+            wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
 
-    st.header("セミナータイトルワードクラウド")
-    for i in range(min(3, len(sorted_scores))):
-        company_name, _ = sorted_scores[i]
-        seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
-        generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.imshow(wordcloud, interpolation='bilinear')
+            ax.set_title(title)
+            ax.axis('off')
+            st.pyplot(fig)
 
-else:
-    st.warning("キーワードに一致する企業が見つかりませんでした。")
+        st.header("セミナータイトルワードクラウド")
+        for i in range(min(3, len(sorted_scores))):
+            company_name, _ = sorted_scores[i]
+            seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
+            generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
+
+    else:
+        st.warning("キーワードに一致する企業が見つかりませんでした。")
