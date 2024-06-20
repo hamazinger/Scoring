@@ -37,15 +37,16 @@ col1, col2, col3 = st.columns(3)
 # --- 業種選択 ---
 with col1:
     industries = [
-        {"User_Company": "製造"},
-        {"User_Company": "通信キャリア・データセンター"},
-        {"User_Company": "商社"},
-        {"User_Company": "小売"},
-        {"User_Company": "金融"},
-        {"User_Company": "建設・土木・設備工事"},
-        {"User_Company": "マーケティング・広告・出版・印刷"},
-        {"User_Company": "教育"},
-        {"User_Company": "IT関連企業"},
+        {"User_Company": "1. 製造"},
+        {"User_Company": "2. 通信キャリア・データセンター"},
+        {"User_Company": "3. 商社"},
+        {"User_Company": "4. 小売"},
+        {"User_Company": "5. 金融"},
+        {"User_Company": "6. 建設・土木・設備工事"},
+        {"User_Company": "7. マーケティング・広告・出版・印刷"},
+        {"User_Company": "8. 教育"},
+        {"User_Company": "9. IT関連企業"},
+        {"User_Company": "10. システム・インテグレータ"}
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
@@ -66,14 +67,14 @@ with col1:
 # --- 従業員規模選択 ---
 with col2:
     employee_sizes = [
-        {"Employee_Size": "5000人以上"},
-        {"Employee_Size": "1000人以上5000人未満"},
-        {"Employee_Size": "500人以上1000人未満"},
-        {"Employee_Size": "300人以上500人未満"},
-        {"Employee_Size": "100人以上300人未満"},
-        {"Employee_Size": "30人以上100人未満"},
-        {"Employee_Size": "10人以上30人未満"},
-        {"Employee_Size": "10人未満"},
+        {"Employee_Size": "1. 5000人以上"},
+        {"Employee_Size": "2. 1000人以上5000人未満"},
+        {"Employee_Size": "3. 500人以上1000人未満"},
+        {"Employee_Size": "4. 300人以上500人未満"},
+        {"Employee_Size": "5. 100人以上300人未満"},
+        {"Employee_Size": "6. 30人以上100人未満"},
+        {"Employee_Size": "7. 10人以上30人未満"},
+        {"Employee_Size": "8. 10人未満"},
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
@@ -94,12 +95,12 @@ with col2:
 # --- 役職選択 ---
 with col3:
     positions = [
-        {"Position_Category": "経営者・役員クラス"},
-        {"Position_Category": "事業部長/工場長クラス"},
-        {"Position_Category": "部長クラス"},
-        {"Position_Category": "課長クラス"},
-        {"Position_Category": "係長・主任クラス"},
-        {"Position_Category": "一般社員・職員クラス"},
+        {"Position_Category": "1. 経営者・役員クラス"},
+        {"Position_Category": "2. 事業部長/工場長クラス"},
+        {"Position_Category": "3. 部長クラス"},
+        {"Position_Category": "4. 課長クラス"},
+        {"Position_Category": "5. 係長・主任クラス"},
+        {"Position_Category": "6. 一般社員・職員クラス"},
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
@@ -157,7 +158,9 @@ if execute_button:
             bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
         ]
 
-        try:
+        try
+
+:
             attendee_data = run_query(attendee_query, query_parameters)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
@@ -196,7 +199,7 @@ if execute_button:
             if row.get('Desired_Follow_Up_Actions') is not None:
                 if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
                     score += 5
-                elif '資料希望' in row['Desired_Follow_Up_Actions']:
+                elif '資料希望'に row['Desired_Follow_Up_Actions']:
                     score += 3
             if row.get('Pre_Seminar_Survey_Answer_2') == '既に同様の商品・サービスを導入済み':
                 score += 3
