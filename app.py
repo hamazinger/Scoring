@@ -193,8 +193,8 @@ if execute_button:
 
     if filtered_companies:
         # クォートされた企業名のリストを生成（シングルクォートをエスケープ）
-        quoted_companies = ", ".join([f"'''{company.replace('''', '''''''')}'''" for company in filtered_companies])
-        
+        quoted_companies = ", ".join(["'{}'".format(company.replace("'", "''")) for company in filtered_companies])
+
         all_seminars_query = f"""
         SELECT *
         FROM `{destination_table}`
