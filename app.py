@@ -73,7 +73,7 @@ with col1:
         height=350,
     )
     st.write(selected_rows_industries)  # これでデータの形式を確認
-    selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
+    selected_industries = [row["User_Company"] for row in selected_rows_industries.selected_rows]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -102,7 +102,7 @@ with col2:
         height=350,
     )
     st.write(selected_rows_employee_sizes)  # これでデータの形式を確認
-    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes.selected_rows]
 
 # --- 役職選択 ---
 with col3:
@@ -128,8 +128,8 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    st.write(selected_rows_positions)  # これでデータの形式を確認
-    selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
+    st.write(selected_rows_positions)  # これでデータの形式を確認  
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions.selected_rows]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
