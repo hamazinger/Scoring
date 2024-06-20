@@ -191,7 +191,7 @@ if execute_button:
             if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
                 score += 3
             if row.get('Desired_Follow_Up_Actions') is not None:
-                if '製品やサービス導入に関する具体的な要望がある’ in row[‘Desired_Follow_Up_Actions’]:
+                if '製品やサービス導入に関する具体的な要望がある' in row[‘Desired_Follow_Up_Actions’]:
                     score += 5
                 elif ‘資料希望’ in row[‘Desired_Follow_Up_Actions’]:
                     score += 3
