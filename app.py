@@ -1,6 +1,7 @@
 import streamlit as st
-from google.cloud import bigquery
+from google.cloud import bigquery, storage
 from google.oauth2 import service_account
+import pandas as pd
 import matplotlib.pyplot as plt
 import japanize_matplotlib
 from wordcloud import WordCloud
@@ -8,18 +9,15 @@ from janome.tokenizer import Tokenizer
 import re
 from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
-import pandas as pd
+import codecs
 
 # Streamlitアプリのタイトルを設定
 st.title("マジセミリードスコアリング＆ワードクラウド")
 
-# テーブルIDを直接指定 (Secretsの問題が解決したら、Secretsから取得するように戻してください)
-destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
-
 # 認証情報の設定
 service_account_info = st.secrets["gcp_service_account"]
 credentials = service_account.Credentials.from_service_account_info(service_account_info)
-project_id = service_account_info["project_id"] 
+project_id = service_account_info["project_id"]
 client = bigquery.Client(credentials=credentials, project=project_id)
 
 # BigQueryからデータを取得する関数
@@ -34,118 +32,64 @@ def run_query(query: str, params=None):
     rows = [dict(row) for row in rows_raw]
     return rows
 
-# ユーザーがキーワードを入力できるようにする
-organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "") # 初期値を空にする
+# GCSからファイルをダウンロードして、Pandasデータフレームに読み込む関数
+def download_blob_to_dataframe(bucket_name, source_blob_name, destination_file_name, credentials):
+    storage_client = storage.Client(credentials=credentials)
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
+    blob.download_to_filename(destination_file_name)
 
-# カテゴリ選択を横に3つ並べる
-col1, col2, col3 = st.columns(3)
+    with codecs.open(destination_file_name, "r", "Shift-JIS", "ignore") as file:
+        df = pd.read_table(file, delimiter=",")
+    return df
 
-# --- 業種選択 ---
-with col1:
-    industries = [
-        {"User_Company": "1. 製造"},
-        {"User_Company": "2. 通信キャリア・データセンター"},
-        {"User_Company": "3. 商社"},
-        {"User_Company": "4. 小売"},
-        {"User_Company": "5. 金融"},
-        {"User_Company": "6. 建設・土木・設備工事"},
-        {"User_Company": "7. マーケティング・広告・出版・印刷"},
-        {"User_Company": "8. 教育"},
-        {"User_Company": "10. システム・インテグレータ"},
-        {"User_Company": "11. IT・ビジネスコンサルティング"},
-        {"User_Company": "12. IT関連製品販売"},
-        {"User_Company": "13. IT関連製品販売"},
-        {"User_Company": "14. SaaS・Webサービス事業"},
-        {"User_Company": "15. その他ITサービス関連"},
-    ]
-    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
-    grid_options_industries = gb.build()
-    st.subheader("業種")
-    selected_rows_industries = AgGrid(
-        pd.DataFrame(industries),
-        gridOptions=grid_options_industries,
-        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        theme='streamlit',
-        fit_columns_on_grid_load=True,
-        height=350,
-    )
-    st.write(selected_rows_industries)  # これでデータの形式を確認
-    selected_industries = [row["User_Company"] for row in selected_rows_industries.selected_rows]
+# GCSからデータを取得
+year = 2024
+month = 5
+bucket_name = 'jib-z62k-tpr5bhb_e'
+source_blob_name = f'{year}_{month}_advs.csv'
+destination_file_name = f'{year}_{month}_advs.csv'
 
-# --- 従業員規模選択 ---
-with col2:
-    employee_sizes = [
-        {"Employee_Size": "1. 5000人以上"},
-        {"Employee_Size": "2. 1000人以上5000人未満"},
-        {"Employee_Size": "3. 500人以上1000人未満"},
-        {"Employee_Size": "4. 300人以上500人未満"},
-        {"Employee_Size": "5. 100人以上300人未満"},
-        {"Employee_Size": "6. 30人以上100人未満"},
-        {"Employee_Size": "7. 10人以上30人未満"},
-        {"Employee_Size": "8. 10人未満"},
-    ]
-    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
-    grid_options_employee_sizes = gb.build()
-    st.subheader("従業員規模") 
-    selected_rows_employee_sizes = AgGrid(
-        pd.DataFrame(employee_sizes),
-        gridOptions=grid_options_employee_sizes,
-        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        theme='streamlit',
-        fit_columns_on_grid_load=True,
-        height=350,
-    )
-    st.write(selected_rows_employee_sizes)  # これでデータの形式を確認
-    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes.selected_rows]
+df = download_blob_to_dataframe(bucket_name, source_blob_name, destination_file_name, credentials)
 
-# --- 役職選択 ---
-with col3:
-    positions = [
-        {"Position_Category": "1. 経営者・役員クラス"},
-        {"Position_Category": "2. 事業部長/工場長クラス"},
-        {"Position_Category": "3. 部長クラス"},
-        {"Position_Category": "4. 課長クラス"},
-        {"Position_Category": "5. 係長・主任クラス"},
-        {"Position_Category": "6. 一般社員・職員クラス"},
-    ]
-    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
-    grid_options_positions = gb.build()
-    st.subheader("役職") 
-    selected_rows_positions = AgGrid(
-        pd.DataFrame(positions),
-        gridOptions=grid_options_positions,
-        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        theme='streamlit',
-        fit_columns_on_grid_load=True,
-        height=350,
-    )
-    st.write(selected_rows_positions)  # これでデータの形式を確認  
-    selected_positions = [row["Position_Category"] for row in selected_rows_positions.selected_rows]
+# データの列名を変換
+def column_rename_natural(df):
+    df['従業員数（企業規模）'] = df['従業員数（企業規模）'].replace('5000人以上','1. 5000人以上')
+    # ... 他の変換もここで行う
+    return df
 
-# 実行ボタンを追加
+df = column_rename_natural(df)
+
+# Streamlit UIの設定
+organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "")
+
+# 業種選択
+with st.columns(3)[0]:
+    industries = df['業種'].unique().tolist()
+    selected_industries = st.multiselect("業種を選択", industries)
+
+# 従業員規模選択
+with st.columns(3)[1]:
+    employee_sizes = df['従業員数（企業規模）'].unique().tolist()
+    selected_employee_sizes = st.multiselect("従業員規模を選択", employee_sizes)
+
+# 役職選択
+with st.columns(3)[2]:
+    positions = df['役職区分'].unique().tolist()
+    selected_positions = st.multiselect("役職を選択", positions)
+
+# 実行ボタン
 execute_button = st.button("実行")
 
-# ボタンが押された場合のみ処理を実行
 if execute_button:
-    # 現在の日付と過去3ヶ月の日付を取得
     today = datetime.today()
     three_months_ago = today - timedelta(days=90)
 
-    # 選択された項目に基づいてクエリを変更
     where_clauses = []
     query_parameters = []
 
     if selected_industries:
-        industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
+        industry_conditions = " OR ".join([f"業種 = @industry_{i}" for i in range(len(selected_industries))])
         where_clauses.append(f"({industry_conditions})")
         query_parameters += [
             bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
@@ -153,7 +97,7 @@ if execute_button:
         ]
 
     if selected_employee_sizes:
-        employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
+        employee_size_conditions = " OR ".join([f"従業員数（企業規模） = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
         query_parameters += [
             bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
@@ -161,7 +105,7 @@ if execute_button:
         ]
 
     if selected_positions:
-        position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
+        position_conditions = " OR ".join([f"役職区分 = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
         query_parameters += [
             bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
@@ -187,7 +131,7 @@ if execute_button:
         attendee_data = []
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
-    filtered_companies = list(set(filtered_companies))  # 重複を削除
+    filtered_companies = list(set(filtered_companies))
 
     if filtered_companies:
         quoted_companies = ", ".join(["'{}'".format(company.replace("'", "''")) for company in filtered_companies])
@@ -223,7 +167,9 @@ if execute_button:
                 score += 3
             elif row.get('Pre_Seminar_Survey_Answer_2') == '製品・サービスの候補を探している':
                 score += 2
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）':
+            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の
+
+確認、情報収集、要件の整理、予算の検討）':
                 score += 1
             return score
 
