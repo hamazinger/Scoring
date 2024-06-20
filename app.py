@@ -72,6 +72,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    st.write(selected_rows_industries)  # これでデータの形式を確認
     selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
 
 # --- 従業員規模選択 ---
@@ -100,6 +101,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    st.write(selected_rows_employee_sizes)  # これでデータの形式を確認
     selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
 
 # --- 役職選択 ---
@@ -126,6 +128,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    st.write(selected_rows_positions)  # これでデータの形式を確認
     selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
 
 # 実行ボタンを追加
@@ -153,14 +156,16 @@ if execute_button:
         employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
         query_parameters += [
-            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
+            bigquery.ScalarQueryParameter(f"employee_size_{i}", "
+
+STRING", size)
             for i, size in enumerate(selected_employee_sizes)
         ]
 
     if selected_positions:
         position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
-        query_parameters +=[
+        query_parameters += [
             bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
             for i, position in enumerate(selected_positions)
         ]
