@@ -1,35 +1,43 @@
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
-import pandas as pd
+import matplotlib.pyplot as plt
+import japanize_matplotlib
+from wordcloud import WordCloud
+from janome.tokenizer import Tokenizer
+import re
 from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
+import pandas as pd
 
 # Streamlitアプリのタイトルを設定
-st.title("リードスコアリング")
+st.title("マジセミリードスコアリング＆ワードクラウド")
+
+# テーブルIDを直接指定 (Secretsの問題が解決したら、Secretsから取得するように戻してください)
+destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # 認証情報の設定
-try:
-    service_account_info = st.secrets["gcp_service_account"]
-    credentials = service_account.Credentials.from_service_account_info(service_account_info)
-    project_id = service_account_info["project_id"]
-    client = bigquery.Client(credentials=credentials, project=project_id)
-except KeyError:
-    st.error("GCPの認証情報が見つかりません。StreamlitのSecretsに設定してください。")
-    st.stop()
-
-destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
+service_account_info = st.secrets["gcp_service_account"]
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
+project_id = service_account_info["project_id"] 
+client = bigquery.Client(credentials=credentials, project=project_id)
 
 # BigQueryからデータを取得する関数
 @st.cache(ttl=600)
-def run_query(query: str, params=None):
-    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=params))
+def run_query(query, params=None):
+    # ScalarQueryParameterオブジェクトのリストを作成
+    if params:
+        query_params = [bigquery.ScalarQueryParameter(None, "STRING", param) for param in params]
+    else:
+        query_params = None
+    
+    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=query_params))
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
     return rows
 
 # ユーザーがキーワードを入力できるようにする
-organizer_keyword = st.text_input("主催企業名を入力してください：", "")  # 初期値を空にする
+organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "") # 初期値を空にする
 
 # カテゴリ選択を横に3つ並べる
 col1, col2, col3 = st.columns(3)
@@ -45,16 +53,17 @@ with col1:
         {"User_Company": "6. 建設・土木・設備工事"},
         {"User_Company": "7. マーケティング・広告・出版・印刷"},
         {"User_Company": "8. 教育"},
+        # {"User_Company": "9. その他"}, # 不要な選択肢を削除
         {"User_Company": "10. システム・インテグレータ"},
         {"User_Company": "11. IT・ビジネスコンサルティング"},
         {"User_Company": "12. IT関連製品販売"},
-        {"User_Company": "13. IT関連企業"},
+        {"User_Company": "13. IT関連製品販売"},
         {"User_Company": "14. SaaS・Webサービス事業"},
-        {"User_Company": "15. その他ITサービス関連"}
+        {"User_Company": "15. その他ITサービス関連"},
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
+    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
     grid_options_industries = gb.build()
     st.subheader("業種")
     selected_rows_industries = AgGrid(
@@ -78,13 +87,14 @@ with col2:
         {"Employee_Size": "5. 100人以上300人未満"},
         {"Employee_Size": "6. 30人以上100人未満"},
         {"Employee_Size": "7. 10人以上30人未満"},
-        {"Employee_Size": "8. 10人未満"}
+        {"Employee_Size": "8. 10人未満"},
+        # {"Employee_Size": "分からない"}, # 不要な選択肢を削除
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
+    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
     grid_options_employee_sizes = gb.build()
-    st.subheader("従業員規模")
+    st.subheader("従業員規模") 
     selected_rows_employee_sizes = AgGrid(
         pd.DataFrame(employee_sizes),
         gridOptions=grid_options_employee_sizes,
@@ -104,13 +114,14 @@ with col3:
         {"Position_Category": "3. 部長クラス"},
         {"Position_Category": "4. 課長クラス"},
         {"Position_Category": "5. 係長・主任クラス"},
-        {"Position_Category": "6. 一般社員・職員クラス"}
+        {"Position_Category": "6. 一般社員・職員クラス"},
+        # {"Position_Category": "7. その他"}, # 不要な選択肢を削除
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
-    gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
+    gb.configure_grid_options(domLayout='normal', headerHeight=0) # headerHeight=0 でヘッダーを非表示にする
     grid_options_positions = gb.build()
-    st.subheader("役職")
+    st.subheader("役職") 
     selected_rows_positions = AgGrid(
         pd.DataFrame(positions),
         gridOptions=grid_options_positions,
@@ -127,9 +138,11 @@ execute_button = st.button("実行")
 
 # ボタンが押された場合のみ処理を実行
 if execute_button:
+    # 現在の日付と過去3ヶ月の日付を取得
     today = datetime.today()
     three_months_ago = today - timedelta(days=90)
 
+    # 選択された項目に基づいてクエリを変更
     where_clauses = []
     query_parameters = []
 
@@ -158,27 +171,19 @@ if execute_button:
         ]
 
     if where_clauses:
-
-
         where_clause = " AND ".join(where_clauses)
         attendee_query = f"""
         SELECT DISTINCT Company_Name
         FROM `{destination_table}`
         WHERE Organizer_Name LIKE @organizer_keyword AND {where_clause}
         """
-
         query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%"))
-
-        # クエリとパラメータのログを出力
-        st.write("Generated Query:", attendee_query)
-        st.write("Query Parameters:", query_parameters)
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
-
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
@@ -187,8 +192,9 @@ if execute_button:
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
-        quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
-
+        # クォートされた企業名のリストを生成（シングルクォートをエスケープ）
+        quoted_companies = ", ".join([f"'{company.replace(\"'\", \"''\")}'" for company in filtered_companies])
+        
         all_seminars_query = f"""
         SELECT *
         FROM `{destination_table}`
@@ -196,10 +202,6 @@ if execute_button:
         AND Seminar_Date >= @three_months_ago
         ORDER BY Company_Name, Seminar_Date
         """
-
-        # クエリとパラメータのログを出力
-        st.write("Generated Seminar Query:", all_seminars_query)
-        st.write("Seminar Query Parameters:", [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
 
         try:
             all_seminars_data = run_query(all_seminars_query, [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
