@@ -1,116 +1,140 @@
 import streamlit as st
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
 from google.oauth2 import service_account
 import pandas as pd
-import matplotlib.pyplot as plt
-import japanize_matplotlib
-from wordcloud import WordCloud
-from janome.tokenizer import Tokenizer
-import re
 from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
-import codecs
 
 # Streamlitアプリのタイトルを設定
-st.title("マジセミリードスコアリング＆ワードクラウド")
+st.title("リードスコアリング")
 
 # 認証情報の設定
-service_account_info = st.secrets["gcp_service_account"]
-credentials = service_account.Credentials.from_service_account_info(service_account_info)
-project_id = service_account_info["project_id"]
-client = bigquery.Client(credentials=credentials, project=project_id)
+try:
+    service_account_info = st.secrets["gcp_service_account"]
+    credentials = service_account.Credentials.from_service_account_info(service_account_info)
+    project_id = service_account_info["project_id"]
+    client = bigquery.Client(credentials=credentials, project=project_id)
+except KeyError:
+    st.error("GCPの認証情報が見つかりません。StreamlitのSecretsに設定してください。")
+    st.stop()
+
+destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
-@st.cache_data(ttl=600)
+@st.cache(ttl=600)
 def run_query(query: str, params=None):
-    if params:
-        job_config = bigquery.QueryJobConfig(query_parameters=params)
-    else:
-        job_config = bigquery.QueryJobConfig()
-    query_job = client.query(query, job_config=job_config)
+    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=params))
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
     return rows
 
-# GCSからファイルをダウンロードして、Pandasデータフレームに読み込む関数
-def download_blob_to_dataframe(bucket_name, source_blob_name, destination_file_name, credentials):
-    storage_client = storage.Client(credentials=credentials)
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(source_blob_name)
-    blob.download_to_filename(destination_file_name)
+# ユーザーがキーワードを入力できるようにする
+organizer_keyword = st.text_input("主催企業名を入力してください：", "")  # 初期値を空にする
 
-    with codecs.open(destination_file_name, "r", "Shift-JIS", "ignore") as file:
-        df = pd.read_table(file, delimiter=",")
-    return df
+# カテゴリ選択を横に3つ並べる
+col1, col2, col3 = st.columns(3)
 
-# GCSからデータを取得
-year = 2024
-month = 5
-bucket_name = 'jib-z62k-tpr5bhb_e'
-source_blob_name = f'{year}_{month}_advs.csv'
-destination_file_name = f'{year}_{month}_advs.csv'
+# --- 業種選択 ---
+with col1:
+    industries = [
+        {"User_Company": "製造"},
+        {"User_Company": "通信キャリア・データセンター"},
+        {"User_Company": "商社"},
+        {"User_Company": "小売"},
+        {"User_Company": "金融"},
+        {"User_Company": "建設・土木・設備工事"},
+        {"User_Company": "マーケティング・広告・出版・印刷"},
+        {"User_Company": "教育"},
+        {"User_Company": "IT関連企業"},
+    ]
+    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
+    gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
+    grid_options_industries = gb.build()
+    st.subheader("業種")
+    selected_rows_industries = AgGrid(
+        pd.DataFrame(industries),
+        gridOptions=grid_options_industries,
+        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        theme='streamlit',
+        fit_columns_on_grid_load=True,
+        height=350,
+    )
+    selected_industries = selected_rows_industries["data"]["User_Company"].tolist()
 
-df = download_blob_to_dataframe(bucket_name, source_blob_name, destination_file_name, credentials)
+# --- 従業員規模選択 ---
+with col2:
+    employee_sizes = [
+        {"Employee_Size": "5000人以上"},
+        {"Employee_Size": "1000人以上5000人未満"},
+        {"Employee_Size": "500人以上1000人未満"},
+        {"Employee_Size": "300人以上500人未満"},
+        {"Employee_Size": "100人以上300人未満"},
+        {"Employee_Size": "30人以上100人未満"},
+        {"Employee_Size": "10人以上30人未満"},
+        {"Employee_Size": "10人未満"},
+    ]
+    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
+    gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
+    grid_options_employee_sizes = gb.build()
+    st.subheader("従業員規模")
+    selected_rows_employee_sizes = AgGrid(
+        pd.DataFrame(employee_sizes),
+        gridOptions=grid_options_employee_sizes,
+        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        theme='streamlit',
+        fit_columns_on_grid_load=True,
+        height=350,
+    )
+    selected_employee_sizes = selected_rows_employee_sizes["data"]["Employee_Size"].tolist()
 
-# データの列名を変換
-def column_rename_natural(df):
-    df['従業員数（企業規模）'] = df['従業員数（企業規模）'].replace('5000人以上','1. 5000人以上')
-    # ... 他の変換もここで行う
-    return df
+# --- 役職選択 ---
+with col3:
+    positions = [
+        {"Position_Category": "経営者・役員クラス"},
+        {"Position_Category": "事業部長/工場長クラス"},
+        {"Position_Category": "部長クラス"},
+        {"Position_Category": "課長クラス"},
+        {"Position_Category": "係長・主任クラス"},
+        {"Position_Category": "一般社員・職員クラス"},
+    ]
+    gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
+    gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
+    grid_options_positions = gb.build()
+    st.subheader("役職")
+    selected_rows_positions = AgGrid(
+        pd.DataFrame(positions),
+        gridOptions=grid_options_positions,
+        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        theme='streamlit',
+        fit_columns_on_grid_load=True,
+        height=350,
+    )
+    selected_positions = selected_rows_positions["data"]["Position_Category"].tolist()
 
-df = column_rename_natural(df)
-
-# Streamlit UIの設定
-organizer_keyword = st.text_input("主催企業名キーワードを入力してください：", "")
-
-# 業種選択
-with st.columns(3)[0]:
-    industries = df['業種'].unique().tolist()
-    selected_industries = st.multiselect("業種を選択", industries)
-
-# 従業員規模選択
-with st.columns(3)[1]:
-    employee_sizes = df['従業員数（企業規模）'].unique().tolist()
-    selected_employee_sizes = st.multiselect("従業員規模を選択", employee_sizes)
-
-# 役職選択
-with st.columns(3)[2]:
-    positions = df['役職区分'].unique().tolist()
-    selected_positions = st.multiselect("役職を選択", positions)
-
-# 実行ボタン
+# 実行ボタンを追加
 execute_button = st.button("実行")
 
+# ボタンが押された場合のみ処理を実行
 if execute_button:
     today = datetime.today()
     three_months_ago = today - timedelta(days=90)
 
     where_clauses = []
-    query_parameters = []
-
     if selected_industries:
-        industry_conditions = " OR ".join([f"業種 = @industry_{i}" for i in range(len(selected_industries))])
+        industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
         where_clauses.append(f"({industry_conditions})")
-        query_parameters += [
-            bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
-            for i, industry in enumerate(selected_industries)
-        ]
-
     if selected_employee_sizes:
-        employee_size_conditions = " OR ".join([f"従業員数（企業規模） = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
+        employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
-        query_parameters += [
-            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
-            for i, size in enumerate(selected_employee_sizes)
-        ]
-
     if selected_positions:
-        position_conditions = " OR ".join([f"役職区分 = @position_{i}" for i in range(len(selected_positions))])
+        position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
-        query_parameters += [
-            bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
-            for i, position in enumerate(selected_positions)
-        ]
 
     if where_clauses:
         where_clause = " AND ".join(where_clauses)
@@ -119,22 +143,35 @@ if execute_button:
         FROM `{destination_table}`
         WHERE Organizer_Name LIKE @organizer_keyword AND {where_clause}
         """
-        query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%"))
+
+        query_parameters = [
+            bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
+            for i, industry in enumerate(selected_industries)
+        ] + [
+            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
+            for i, size in enumerate(selected_employee_sizes)
+        ] + [
+            bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
+            for i, position in enumerate(selected_positions)
+        ] + [
+            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
+        ]
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
+
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
-    filtered_companies = list(set(filtered_companies))
+    filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
-        quoted_companies = ", ".join(["'{}'".format(company.replace("'", "''")) for company in filtered_companies])
+        quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
 
         all_seminars_query = f"""
         SELECT *
