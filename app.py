@@ -160,9 +160,7 @@ if execute_button:
     if selected_positions:
         position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
-        query_parameters +=
-
- [
+        query_parameters +=[
             bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
             for i, position in enumerate(selected_positions)
         ]
