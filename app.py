@@ -23,10 +23,12 @@ project_id = service_account_info["project_id"]
 client = bigquery.Client(credentials=credentials, project=project_id)
 
 # BigQueryからデータを取得する関数
-@st.cache(ttl=600)
+@st.cache_data(ttl=600)
 def run_query(query: str, params=None):
-    # job_configに渡す前に、ScalarQueryParameterオブジェクトをAPI表現に変換
-    job_config = bigquery.QueryJobConfig(query_parameters=[param.to_api_repr() for param in params] if params else None)
+    if params:
+        job_config = bigquery.QueryJobConfig(query_parameters=params)
+    else:
+        job_config = bigquery.QueryJobConfig()
     query_job = client.query(query, job_config=job_config)
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
@@ -49,7 +51,6 @@ with col1:
         {"User_Company": "6. 建設・土木・設備工事"},
         {"User_Company": "7. マーケティング・広告・出版・印刷"},
         {"User_Company": "8. 教育"},
-        # {"User_Company": "9. その他"}, # 不要な選択肢を削除
         {"User_Company": "10. システム・インテグレータ"},
         {"User_Company": "11. IT・ビジネスコンサルティング"},
         {"User_Company": "12. IT関連製品販売"},
@@ -71,7 +72,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_industries = selected_rows_industries["data"]["User_Company"].tolist()
+    selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -84,7 +85,6 @@ with col2:
         {"Employee_Size": "6. 30人以上100人未満"},
         {"Employee_Size": "7. 10人以上30人未満"},
         {"Employee_Size": "8. 10人未満"},
-        # {"Employee_Size": "分からない"}, # 不要な選択肢を削除
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
@@ -100,7 +100,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_employee_sizes = selected_rows_employee_sizes["data"]["Employee_Size"].tolist()
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
 
 # --- 役職選択 ---
 with col3:
@@ -111,7 +111,6 @@ with col3:
         {"Position_Category": "4. 課長クラス"},
         {"Position_Category": "5. 係長・主任クラス"},
         {"Position_Category": "6. 一般社員・職員クラス"},
-        # {"Position_Category": "7. その他"}, # 不要な選択肢を削除
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
@@ -127,7 +126,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_positions = selected_rows_positions["data"]["Position_Category"].tolist()
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -161,7 +160,9 @@ if execute_button:
     if selected_positions:
         position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
-        query_parameters += [
+        query_parameters +=
+
+ [
             bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
             for i, position in enumerate(selected_positions)
         ]
@@ -188,7 +189,6 @@ if execute_button:
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
-        # クォートされた企業名のリストを生成（シングルクォートをエスケープ）
         quoted_companies = ", ".join(["'{}'".format(company.replace("'", "''")) for company in filtered_companies])
 
         all_seminars_query = f"""
@@ -243,11 +243,6 @@ if execute_button:
             st.write(f"{i + 1}. {company_name}: {score}点")
 
         def generate_wordcloud(font_path, text, title):
-            from wordcloud import WordCloud
-            from janome.tokenizer import Tokenizer
-            import re
-            import matplotlib.pyplot as plt
-
             t = Tokenizer()
             tokens = t.tokenize(text)
             words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
