@@ -168,9 +168,7 @@ if execute_button:
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
-        quoted_companies =
-
- ", ".join([f"'{company}'" for company in filtered_companies])
+        quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
 
         all_seminars_query = f"""
         SELECT *
@@ -181,7 +179,9 @@ if execute_button:
         """
 
         try:
-            all_seminars_data = run_query(all_seminars_query, [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
+            all_seminars_data = run_query(all_seminars_query, [
+
+bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
