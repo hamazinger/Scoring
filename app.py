@@ -197,7 +197,7 @@ if execute_button:
             if row.get('Desired_Follow_Up_Actions') is not None:
                 if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
                     score += 5
-                elif '資料希望'に row['Desired_Follow_Up_Actions']:
+                elif '資料希望' row['Desired_Follow_Up_Actions']:
                     score += 3
             if row.get('Pre_Seminar_Survey_Answer_2') == '既に同様の商品・サービスを導入済み':
                 score += 3
