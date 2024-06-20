@@ -167,9 +167,7 @@ if execute_button:
                 score += 3
             elif row.get('Pre_Seminar_Survey_Answer_2') == '製品・サービスの候補を探している':
                 score += 2
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の
-
-確認、情報収集、要件の整理、予算の検討）':
+            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）':
                 score += 1
             return score
 
