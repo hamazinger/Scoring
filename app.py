@@ -45,8 +45,12 @@ with col1:
         {"User_Company": "6. 建設・土木・設備工事"},
         {"User_Company": "7. マーケティング・広告・出版・印刷"},
         {"User_Company": "8. 教育"},
-        {"User_Company": "9. IT関連企業"},
-        {"User_Company": "10. システム・インテグレータ"}
+        {"User_Company": "10. システム・インテグレータ"},
+        {"User_Company": "11. IT・ビジネスコンサルティング"},
+        {"User_Company": "12. IT関連製品販売"},
+        {"User_Company": "13. IT関連企業"},
+        {"User_Company": "14. SaaS・Webサービス事業"},
+        {"User_Company": "15. その他ITサービス関連"}
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
@@ -74,7 +78,7 @@ with col2:
         {"Employee_Size": "5. 100人以上300人未満"},
         {"Employee_Size": "6. 30人以上100人未満"},
         {"Employee_Size": "7. 10人以上30人未満"},
-        {"Employee_Size": "8. 10人未満"},
+        {"Employee_Size": "8. 10人未満"}
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
@@ -100,7 +104,7 @@ with col3:
         {"Position_Category": "3. 部長クラス"},
         {"Position_Category": "4. 課長クラス"},
         {"Position_Category": "5. 係長・主任クラス"},
-        {"Position_Category": "6. 一般社員・職員クラス"},
+        {"Position_Category": "6. 一般社員・職員クラス"}
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
     gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
@@ -132,28 +136,30 @@ if execute_button:
     if selected_industries:
         industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
         where_clauses.append(f"({industry_conditions})")
-        query_parameters.extend(
-            [bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
-             for i, industry in enumerate(selected_industries)]
-        )
+        query_parameters += [
+            bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
+            for i, industry in enumerate(selected_industries)
+        ]
 
     if selected_employee_sizes:
         employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
-        query_parameters.extend(
-            [bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
-             for i, size in enumerate(selected_employee_sizes)]
-        )
+        query_parameters += [
+            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
+            for i, size in enumerate(selected_employee_sizes)
+        ]
 
     if selected_positions:
         position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
-        query_parameters.extend(
-            [bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
-             for i, position in enumerate(selected_positions)]
-        )
+        query_parameters += [
+            bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
+            for i, position in enumerate(selected_positions)
+        ]
 
     if where_clauses:
+
+
         where_clause = " AND ".join(where_clauses)
         attendee_query = f"""
         SELECT DISTINCT Company_Name
@@ -163,11 +169,16 @@ if execute_button:
 
         query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%"))
 
+        # クエリとパラメータのログを出力
+        st.write("Generated Query:", attendee_query)
+        st.write("Query Parameters:", query_parameters)
+
         try:
             attendee_data = run_query(attendee_query, query_parameters)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
+
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
@@ -185,6 +196,10 @@ if execute_button:
         AND Seminar_Date >= @three_months_ago
         ORDER BY Company_Name, Seminar_Date
         """
+
+        # クエリとパラメータのログを出力
+        st.write("Generated Seminar Query:", all_seminars_query)
+        st.write("Seminar Query Parameters:", [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
 
         try:
             all_seminars_data = run_query(all_seminars_query, [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
@@ -231,9 +246,9 @@ if execute_button:
 
         def generate_wordcloud(font_path, text, title):
             from wordcloud import WordCloud
-            import matplotlib.pyplot as plt
             from janome.tokenizer import Tokenizer
             import re
+            import matplotlib.pyplot as plt
 
             t = Tokenizer()
             tokens = t.tokenize(text)
