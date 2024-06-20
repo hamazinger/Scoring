@@ -1,14 +1,9 @@
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
-import matplotlib.pyplot as plt
-import japanize_matplotlib
-from wordcloud import WordCloud
-from janome.tokenizer import Tokenizer
-import re
+import pandas as pd
 from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
-import pandas as pd
 
 # Streamlitアプリのタイトルを設定
 st.title("リードスコアリング")
@@ -148,15 +143,25 @@ if execute_button:
         FROM `{destination_table}`
         WHERE Organizer_Name LIKE @organizer_keyword AND {where_clause}
         """
-        
-        query_parameters = [bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)] + \
-                           [bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)] + \
-                           [bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)] + \
-                           [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")]
+
+        query_parameters = [
+            bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
+            for i, industry in enumerate(selected_industries)
+        ] + [
+            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
+            for i, size in enumerate(selected_employee_sizes)
+        ] + [
+            bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
+            for i, position in enumerate(selected_positions)
+        ] + [
+            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
+        ]
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
-        except Exception as e:
+        except Exception as
+
+ e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
 
@@ -179,9 +184,7 @@ if execute_button:
         """
 
         try:
-            all_seminars_data = run_query(all_seminars_query, [
-
-bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
+            all_seminars_data = run_query(all_seminars_query, [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
