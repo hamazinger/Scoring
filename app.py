@@ -172,9 +172,7 @@ if execute_button:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
 
-    filtered
-
-_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
+    filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
