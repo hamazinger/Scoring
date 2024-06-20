@@ -127,15 +127,31 @@ if execute_button:
     three_months_ago = today - timedelta(days=90)
 
     where_clauses = []
+    query_parameters = []
+
     if selected_industries:
         industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
         where_clauses.append(f"({industry_conditions})")
+        query_parameters.extend(
+            [bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
+             for i, industry in enumerate(selected_industries)]
+        )
+
     if selected_employee_sizes:
         employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
+        query_parameters.extend(
+            [bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
+             for i, size in enumerate(selected_employee_sizes)]
+        )
+
     if selected_positions:
         position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
+        query_parameters.extend(
+            [bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
+             for i, position in enumerate(selected_positions)]
+        )
 
     if where_clauses:
         where_clause = " AND ".join(where_clauses)
@@ -145,30 +161,20 @@ if execute_button:
         WHERE Organizer_Name LIKE @organizer_keyword AND {where_clause}
         """
 
-        query_parameters = [
-            bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
-            for i, industry in enumerate(selected_industries)
-        ] + [
-            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
-            for i, size in enumerate(selected_employee_sizes)
-        ] + [
-            bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
-            for i, position in enumerate(selected_positions)
-        ] + [
-            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
-        ]
+        query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%"))
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
-
     else:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
 
-    filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
+    filtered
+
+_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
     if filtered_companies:
@@ -226,6 +232,11 @@ if execute_button:
             st.write(f"{i + 1}. {company_name}: {score}点")
 
         def generate_wordcloud(font_path, text, title):
+            from wordcloud import WordCloud
+            import matplotlib.pyplot as plt
+            from janome.tokenizer import Tokenizer
+            import re
+
             t = Tokenizer()
             tokens = t.tokenize(text)
             words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
