@@ -158,9 +158,7 @@ if execute_button:
             bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
         ]
 
-        try
-
-:
+        try:
             attendee_data = run_query(attendee_query, query_parameters)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
