@@ -159,9 +159,7 @@ if execute_button:
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
-        except Exception as
-
- e:
+        except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
 
