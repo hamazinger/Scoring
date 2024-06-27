@@ -68,8 +68,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    st.write("デバッグ: grid_response_industries", grid_response_industries)
-    selected_rows_industries = grid_response_industries.get("selected_rows", [])
+    selected_rows_industries = grid_response_industries['selected_rows']
 
     selected_industries = [row["User_Company"] for row in selected_rows_industries]
 
@@ -99,8 +98,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    st.write("デバッグ: grid_response_employee_sizes", grid_response_employee_sizes)
-    selected_rows_employee_sizes = grid_response_employee_sizes.get("selected_rows", [])
+    selected_rows_employee_sizes = grid_response_employee_sizes['selected_rows']
 
     selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes]
 
@@ -128,8 +126,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    st.write("デバッグ: grid_response_positions", grid_response_positions)
-    selected_rows_positions = grid_response_positions.get("selected_rows", [])
+    selected_rows_positions = grid_response_positions['selected_rows']
 
     selected_positions = [row["Position_Category"] for row in selected_rows_positions]
 
@@ -191,7 +188,9 @@ if execute_button:
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
-    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data))
+    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data
+
+))
     st.write("デバッグ: フィルタリング後の企業数", len(filtered_companies))
     st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
@@ -342,8 +341,7 @@ if execute_button:
 st.sidebar.subheader("選択操作")
 if st.sidebar.button("全て選択"):
     for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
-        if 'data' in grid:
-            grid['selected_rows'] = grid["data"].copy()
+        grid['selected_rows'] = grid["data"].copy()
     st.experimental_rerun()
 
 if st.sidebar.button("全て解除"):
