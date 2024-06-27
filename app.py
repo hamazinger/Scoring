@@ -68,10 +68,8 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    if 'data' in selected_rows_industries:
-        selected_industries = [row["User_Company"] for row in selected_rows_industries["data"] if row.get("_selected_")]
-    else:
-        selected_industries = []
+
+    selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -99,10 +97,8 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    if 'data' in selected_rows_employee_sizes:
-        selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["data"] if row.get("_selected_")]
-    else:
-        selected_employee_sizes = []
+
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
 
 # --- 役職選択 ---
 with col3:
@@ -128,10 +124,8 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    if 'data' in selected_rows_positions:
-        selected_positions = [row["Position_Category"] for row in selected_rows_positions["data"] if row.get("_selected_")]
-    else:
-        selected_positions = []
+
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -191,7 +185,9 @@ if execute_button:
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
-    st.write("デバッグ:フィルタリング前の企業数", len(attendee_data))
+    st.write("デバッグ: フ
+
+ィルタリング前の企業数", len(attendee_data))
     st.write("デバッグ: フィルタリング後の企業数", len(filtered_companies))
     st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
@@ -342,12 +338,10 @@ if execute_button:
 st.sidebar.subheader("選択操作")
 if st.sidebar.button("全て選択"):
     for grid in [selected_rows_industries, selected_rows_employee_sizes, selected_rows_positions]:
-        if 'data' in grid:
-            grid['data']['_selected_'] = True
+        grid['selected_rows'] = grid["data"].copy()
     st.experimental_rerun()
 
 if st.sidebar.button("全て解除"):
     for grid in [selected_rows_industries, selected_rows_employee_sizes, selected_rows_positions]:
-        if 'data' in grid:
-            grid['data']['_selected_'] = False
+        grid['selected_rows'] = []
     st.experimental_rerun()
