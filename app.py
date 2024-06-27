@@ -69,6 +69,7 @@ with col1:
         height=350,
     )
     selected_rows_industries = grid_response_industries['selected_rows']
+    st.write("デバッグ: selected_rows_industries", selected_rows_industries)  # デバッグ用に追加
 
     selected_industries = [row["User_Company"] for row in selected_rows_industries]
 
@@ -99,6 +100,7 @@ with col2:
         height=350,
     )
     selected_rows_employee_sizes = grid_response_employee_sizes['selected_rows']
+    st.write("デバッグ: selected_rows_employee_sizes", selected_rows_employee_sizes)  # デバッグ用に追加
 
     selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes]
 
@@ -127,6 +129,7 @@ with col3:
         height=350,
     )
     selected_rows_positions = grid_response_positions['selected_rows']
+    st.write("デバッグ: selected_rows_positions", selected_rows_positions)  # デバッグ用に追加
 
     selected_positions = [row["Position_Category"] for row in selected_rows_positions]
 
@@ -182,15 +185,15 @@ if execute_button:
         attendee_data = run_query(attendee_query, query_parameters)
         st.write("デバッグ: attendee_data", attendee_data)
     except Exception as e:
-        st.error(f"BigQueryのクエリに失敗しました: {e}")
+        st.error(f"BigQuery
+
+のクエリに失敗しました: {e}")
         st.stop()
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
-    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data
-
-))
+    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data))
     st.write("デバッグ: フィルタリング後の企業数", len(filtered_companies))
     st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
