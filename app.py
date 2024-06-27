@@ -170,6 +170,7 @@ if execute_button:
     st.write("デバッグ: 主催企業キーワード", organizer_keyword)
     st.write("デバッグ: 生成されたクエリ", attendee_query)
     st.write("デバッグ: クエリパラメータ", query_parameters)
+    st.write("デバッグ: where_clauses", where_clauses)
 
     try:
         attendee_data = run_query(attendee_query, query_parameters)
@@ -277,6 +278,10 @@ if execute_button:
             st.pyplot(fig)
 
         st.header("セミナータイトルワードクラウド")
+        for i in range(min(3, len(sorted_scores))):
+            company_name, _ = sorted_scores[i]
+            seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars
+            st.header("セミナータイトルワードクラウド")
         for i in range(min(3, len(sorted_scores))):
             company_name, _ = sorted_scores[i]
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
