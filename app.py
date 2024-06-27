@@ -27,7 +27,10 @@ destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 # BigQueryからデータを取得する関数
 @st.cache_data(ttl=600)
 def run_query(query: str, _params=None):
-    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=_params))
+    job_config = bigquery.QueryJobConfig()
+    if _params:
+        job_config.query_parameters = _params
+    query_job = client.query(query, job_config=job_config)
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
     return rows
@@ -299,7 +302,7 @@ if execute_button:
     FROM `{destination_table}`
     LIMIT 10
     """
-    sample_data = run_query(sample_query)
+    sample_data = run_query(sample_query, _params=[])
     st.write("データベースのサンプルデータ:")
     st.dataframe(sample_data)
 
