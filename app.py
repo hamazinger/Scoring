@@ -4,6 +4,10 @@ from google.oauth2 import service_account
 import pandas as pd
 from datetime import datetime, timedelta
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from janome.tokenizer import Tokenizer
+import re
 
 # Streamlitアプリのタイトルを設定
 st.title("リードスコアリング")
@@ -157,8 +161,17 @@ if execute_button:
             bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
         ]
 
+        # デバッグ情報の表示
+        st.write("デバッグ: 選択された業種", selected_industries)
+        st.write("デバッグ: 選択された従業員規模", selected_employee_sizes)
+        st.write("デバッグ: 選択された役職", selected_positions)
+        st.write("デバッグ: 主催企業キーワード", organizer_keyword)
+        st.write("デバッグ: 生成されたクエリ", attendee_query)
+        st.write("デバッグ: クエリパラメータ", query_parameters)
+
         try:
             attendee_data = run_query(attendee_query, query_parameters)
+            st.write("デバッグ: attendee_data", attendee_data)  # この行を追加
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
@@ -167,8 +180,12 @@ if execute_button:
         st.warning("業種、従業員規模、役職のいずれかを選択してください。")
         attendee_data = []
 
-    filtered_companies = [row['Company_Name'] for row in attendee_data if row['Company_Name'] is not None]
+    filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
+
+    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data))
+    st.write("デバッグ: フィルタリング後の企業数", len(filtered_companies))
+    st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
     if filtered_companies:
         quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
