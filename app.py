@@ -21,9 +21,9 @@ except KeyError:
 destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
-@st.cache(ttl=600)
-def run_query(query: str, params=None):
-    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=params))
+@st.cache_data(ttl=600)
+def run_query(query: str, _params=None):
+    query_job = client.query(query, job_config=bigquery.QueryJobConfig(query_parameters=_params))
     rows_raw = query_job.result()
     rows = [dict(row) for row in rows_raw]
     return rows
