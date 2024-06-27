@@ -52,7 +52,7 @@ with col1:
         {"User_Company": "IT関連企業"},
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(industries))
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(industries))))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
     gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
     grid_options_industries = gb.build()
     st.subheader("業種")
@@ -65,7 +65,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_industries = selected_rows_industries["data"]["User_Company"].tolist()
+    selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -80,7 +80,7 @@ with col2:
         {"Employee_Size": "10人未満"},
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(employee_sizes))
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(employee_sizes))))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
     gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
     grid_options_employee_sizes = gb.build()
     st.subheader("従業員規模")
@@ -93,7 +93,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_employee_sizes = selected_rows_employee_sizes["data"]["Employee_Size"].tolist()
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
 
 # --- 役職選択 ---
 with col3:
@@ -106,7 +106,7 @@ with col3:
         {"Position_Category": "一般社員・職員クラス"},
     ]
     gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(positions))
-    gb.configure_selection(selection_mode="multiple", use_checkbox=True, pre_selected_rows=list(range(len(positions))))
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True)
     gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
     grid_options_positions = gb.build()
     st.subheader("役職")
@@ -119,7 +119,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_positions = selected_rows_positions["data"]["Position_Category"].tolist()
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -128,6 +128,15 @@ execute_button = st.button("実行")
 if execute_button:
     today = datetime.today()
     three_months_ago = today - timedelta(days=90)
+
+    # デバッグ用のシンプルなクエリ
+    debug_query = f"""
+    SELECT DISTINCT Company_Name, Organizer_Name
+    FROM `{destination_table}`
+    LIMIT 10
+    """
+    debug_data = run_query(debug_query)
+    st.write("デバッグ: サンプルデータ", debug_data)
 
     where_clauses = []
     if selected_industries:
@@ -145,40 +154,43 @@ if execute_button:
         attendee_query = f"""
         SELECT DISTINCT Company_Name
         FROM `{destination_table}`
-        WHERE Organizer_Name LIKE @organizer_keyword AND {where_clause}
+        WHERE Organizer_Name LIKE @organizer_keyword
+        AND {where_clause}
+        """
+    else:
+        attendee_query = f"""
+        SELECT DISTINCT Company_Name
+        FROM `{destination_table}`
+        WHERE Organizer_Name LIKE @organizer_keyword
         """
 
-        query_parameters = [
-            bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
-            for i, industry in enumerate(selected_industries)
-        ] + [
-            bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
-            for i, size in enumerate(selected_employee_sizes)
-        ] + [
-            bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
-            for i, position in enumerate(selected_positions)
-        ] + [
-            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
-        ]
+    query_parameters = [
+        bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry)
+        for i, industry in enumerate(selected_industries)
+    ] + [
+        bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size)
+        for i, size in enumerate(selected_employee_sizes)
+    ] + [
+        bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position)
+        for i, position in enumerate(selected_positions)
+    ] + [
+        bigquery.ScalarQueryParameter("organizer_keyword", "STRING", f"%{organizer_keyword}%")
+    ]
 
-        # デバッグ情報の表示
-        st.write("デバッグ: 選択された業種", selected_industries)
-        st.write("デバッグ: 選択された従業員規模", selected_employee_sizes)
-        st.write("デバッグ: 選択された役職", selected_positions)
-        st.write("デバッグ: 主催企業キーワード", organizer_keyword)
-        st.write("デバッグ: 生成されたクエリ", attendee_query)
-        st.write("デバッグ: クエリパラメータ", query_parameters)
+    # デバッグ情報の表示
+    st.write("デバッグ: 選択された業種", selected_industries)
+    st.write("デバッグ: 選択された従業員規模", selected_employee_sizes)
+    st.write("デバッグ: 選択された役職", selected_positions)
+    st.write("デバッグ: 主催企業キーワード", organizer_keyword)
+    st.write("デバッグ: 生成されたクエリ", attendee_query)
+    st.write("デバッグ: クエリパラメータ", query_parameters)
 
-        try:
-            attendee_data = run_query(attendee_query, query_parameters)
-            st.write("デバッグ: attendee_data", attendee_data)  # この行を追加
-        except Exception as e:
-            st.error(f"BigQueryのクエリに失敗しました: {e}")
-            st.stop()
-
-    else:
-        st.warning("業種、従業員規模、役職のいずれかを選択してください。")
-        attendee_data = []
+    try:
+        attendee_data = run_query(attendee_query, query_parameters)
+        st.write("デバッグ: attendee_data", attendee_data)  # この行を追加
+    except Exception as e:
+        st.error(f"BigQueryのクエリに失敗しました: {e}")
+        st.stop()
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
