@@ -185,9 +185,7 @@ if execute_button:
         attendee_data = run_query(attendee_query, query_parameters)
         st.write("デバッグ: attendee_data", attendee_data)
     except Exception as e:
-        st.error(f"BigQueryのクエリに
-
-失敗しました: {e}")
+        st.error(f"BigQueryのクエリに失敗しました: {e}")
         st.stop()
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
