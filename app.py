@@ -68,7 +68,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_industries = [row["User_Company"] for row in selected_rows_industries["data"].to_dict('records') if row.get("_selected_", False)]
+    selected_industries = [row["User_Company"] for row in selected_rows_industries["data"] if row.get("_selected_")]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -96,7 +96,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["data"].to_dict('records') if row.get("_selected_", False)]
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["data"] if row.get("_selected_")]
 
 # --- 役職選択 ---
 with col3:
@@ -122,7 +122,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_positions = [row["Position_Category"] for row in selected_rows_positions["data"].to_dict('records') if row.get("_selected_", False)]
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions["data"] if row.get("_selected_")]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -328,3 +328,15 @@ if execute_button:
         condition_data = run_query(condition_query, [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)])
         st.write(f"{condition}ごとのレコード数:")
         st.dataframe(condition_data)
+
+# 全選択/全解除ボタンを追加
+st.sidebar.subheader("選択操作")
+if st.sidebar.button("全て選択"):
+    for grid in [selected_rows_industries, selected_rows_employee_sizes, selected_rows_positions]:
+        grid.data['_selected_'] = True
+    st.experimental_rerun()
+
+if st.sidebar.button("全て解除"):
+    for grid in [selected_rows_industries, selected_rows_employee_sizes, selected_rows_positions]:
+        grid.data['_selected_'] = False
+    st.experimental_rerun()
