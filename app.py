@@ -65,7 +65,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
+    selected_industries = [row["User_Company"] for row in selected_rows_industries["data"].to_dict('records') if row.get("_selected_")]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -93,7 +93,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["data"].to_dict('records') if row.get("_selected_")]
 
 # --- 役職選択 ---
 with col3:
@@ -119,7 +119,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions["data"].to_dict('records') if row.get("_selected_")]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
