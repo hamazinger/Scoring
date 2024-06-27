@@ -191,7 +191,9 @@ if execute_button:
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
 
-    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data))
+    st.write("デバッグ:
+
+ フィルタリング前の企業数", len(attendee_data))
     st.write("デバッグ: フィルタリング後の企業数", len(filtered_companies))
     st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
