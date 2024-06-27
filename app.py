@@ -65,7 +65,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_industries = [row["User_Company"] for row in selected_rows_industries["data"].to_dict('records') if row.get("_selected_")]
+    selected_industries = [row["User_Company"] for row in selected_rows_industries["data"].to_dict('records') if row.get("_selected_", False)]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -93,7 +93,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["data"].to_dict('records') if row.get("_selected_")]
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["data"].to_dict('records') if row.get("_selected_", False)]
 
 # --- 役職選択 ---
 with col3:
@@ -119,7 +119,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    selected_positions = [row["Position_Category"] for row in selected_rows_positions["data"].to_dict('records') if row.get("_selected_")]
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions["data"].to_dict('records') if row.get("_selected_", False)]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -183,21 +183,36 @@ if execute_button:
     st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
     if filtered_companies:
-        quoted_companies = ", ".join([f"'{company}'" for company in filtered_companies])
+        # 会社名をエスケープする関数
+        def escape_company_name(name):
+            return name.replace("'", "''")
 
+        # エスケープした会社名のリストを作成
+        escaped_companies = [escape_company_name(company) for company in filtered_companies]
+
+        # IN句の代わりにUNNESTを使用
         all_seminars_query = f"""
         SELECT *
         FROM `{destination_table}`
-        WHERE Company_Name IN ({quoted_companies})
+        WHERE Company_Name IN UNNEST(@companies)
         AND Seminar_Date >= @three_months_ago
         ORDER BY Company_Name, Seminar_Date
         """
 
+        query_params = [
+            bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
+            bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))
+        ]
+
         try:
-            all_seminars_data = run_query(all_seminars_query, [bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))])
+            all_seminars_data = run_query(all_seminars_query, query_params)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
+
+        # デバッグ情報の追加
+        st.write("デバッグ: all_seminars_query", all_seminars_query)
+        st.write("デバッグ: query_params", query_params)
 
         def calculate_score(row):
             score = 0
