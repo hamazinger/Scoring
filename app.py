@@ -59,7 +59,7 @@ with col1:
     gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
     grid_options_industries = gb.build()
     st.subheader("業種")
-    selected_rows_industries = AgGrid(
+    grid_response_industries = AgGrid(
         pd.DataFrame(industries),
         gridOptions=grid_options_industries,
         data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
@@ -68,8 +68,10 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    st.write("デバッグ: grid_response_industries", grid_response_industries)
+    selected_rows_industries = grid_response_industries.get("selected_rows", [])
 
-    selected_industries = [row["User_Company"] for row in selected_rows_industries["selected_rows"]]
+    selected_industries = [row["User_Company"] for row in selected_rows_industries]
 
 # --- 従業員規模選択 ---
 with col2:
@@ -88,7 +90,7 @@ with col2:
     gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
     grid_options_employee_sizes = gb.build()
     st.subheader("従業員規模")
-    selected_rows_employee_sizes = AgGrid(
+    grid_response_employee_sizes = AgGrid(
         pd.DataFrame(employee_sizes),
         gridOptions=grid_options_employee_sizes,
         data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
@@ -97,8 +99,10 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    st.write("デバッグ: grid_response_employee_sizes", grid_response_employee_sizes)
+    selected_rows_employee_sizes = grid_response_employee_sizes.get("selected_rows", [])
 
-    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes["selected_rows"]]
+    selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes]
 
 # --- 役職選択 ---
 with col3:
@@ -115,7 +119,7 @@ with col3:
     gb.configure_grid_options(domLayout='normal', headerHeight=0)  # ヘッダーを非表示にする
     grid_options_positions = gb.build()
     st.subheader("役職")
-    selected_rows_positions = AgGrid(
+    grid_response_positions = AgGrid(
         pd.DataFrame(positions),
         gridOptions=grid_options_positions,
         data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
@@ -124,8 +128,10 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    st.write("デバッグ: grid_response_positions", grid_response_positions)
+    selected_rows_positions = grid_response_positions.get("selected_rows", [])
 
-    selected_positions = [row["Position_Category"] for row in selected_rows_positions["selected_rows"]]
+    selected_positions = [row["Position_Category"] for row in selected_rows_positions]
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
@@ -179,7 +185,9 @@ if execute_button:
         attendee_data = run_query(attendee_query, query_parameters)
         st.write("デバッグ: attendee_data", attendee_data)
     except Exception as e:
-        st.error(f"BigQueryのクエリに失敗しました: {e}")
+        st.error(f"BigQueryのクエリに
+
+失敗しました: {e}")
         st.stop()
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
@@ -335,11 +343,12 @@ if execute_button:
 # 全選択/全解除ボタンを追加
 st.sidebar.subheader("選択操作")
 if st.sidebar.button("全て選択"):
-    for grid in [selected_rows_industries, selected_rows_employee_sizes, selected_rows_positions]:
-        grid['selected_rows'] = grid["data"].copy()
+    for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
+        if 'data' in grid:
+            grid['selected_rows'] = grid["data"].copy()
     st.experimental_rerun()
 
 if st.sidebar.button("全て解除"):
-    for grid in [selected_rows_industries, selected_rows_employee_sizes, selected_rows_positions]:
+    for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
         grid['selected_rows'] = []
     st.experimental_rerun()
