@@ -280,10 +280,6 @@ if execute_button:
         st.header("セミナータイトルワードクラウド")
         for i in range(min(3, len(sorted_scores))):
             company_name, _ = sorted_scores[i]
-            seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars
-            st.header("セミナータイトルワードクラウド")
-        for i in range(min(3, len(sorted_scores))):
-            company_name, _ = sorted_scores[i]
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
 
