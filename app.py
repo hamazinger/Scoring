@@ -134,7 +134,7 @@ if execute_button:
         # フィルタリング後の企業リストを確認
         if filtered_companies:
             st.write(f"フィルタリング後の企業数: {len(filtered_companies)}")
-            st.write("フィルタリング後の企業:", filtered_companies[:10])  # 最初の10社のみ表示
+            # st.write("フィルタリング後の企業:", filtered_companies[:10])  # 最初の10社のみ表示
         else:
             st.warning("フィルタリング後の企業が見つかりませんでした。")
             st.stop()
@@ -187,7 +187,7 @@ if execute_button:
 
         # all_seminars_dataの内容を確認
         st.write("all_seminars_dataの長さ:", len(all_seminars_data))
-        st.write("all_seminars_dataの最初の5件:", all_seminars_data[:5])
+        # st.write("all_seminars_dataの最初の5件:", all_seminars_data[:5])
 
         def calculate_score(row):
             score = 0
@@ -211,21 +211,15 @@ if execute_button:
                     score += 1
             return score
 
-        # # スコア計算のデバッグ出力
-        # st.write("スコア計算のデバッグ:")
-        # company_scores = {}
-        # # all_seminars_data全体をループするように修正
-        # for i, row in enumerate(all_seminars_data):
-        #     score = calculate_score(row)
-        #     st.write(f"企業: {row['Company_Name']}, スコア: {score}")
-        #     if i == 0:
-        #         st.write("スコア計算の詳細:", row)
-            
-        #     company_name = row['Company_Name']
-        #     if company_name in company_scores:
-        #         company_scores[company_name] += score
-        #     else:
-        #         company_scores[company_name] = score
+        # スコア計算
+        company_scores = {}
+        for row in all_seminars_data:
+            score = calculate_score(row)            
+            company_name = row['Company_Name']
+            if company_name in company_scores:
+                company_scores[company_name] += score
+            else:
+                company_scores[company_name] = score
 
         # ソート後のスコアを確認
         sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
