@@ -22,7 +22,7 @@ except KeyError:
     st.error("GCPの認証情報が見つかりません。StreamlitのSecretsに設定してください。")
     st.stop()
 
-destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
+destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"  # テーブルIDを修正
 
 # BigQueryからデータを取得する関数
 @st.cache_data(ttl=600)
@@ -130,6 +130,7 @@ with col3:
 # 実行ボタンを追加
 execute_button = st.button("実行")
 
+
 # ボタンが押された場合のみ処理を実行
 if execute_button:
     today = datetime.today()
@@ -155,132 +156,122 @@ if execute_button:
         where_clauses.append(f"({position_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
-    query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard))
-
+    # クエリを修正
     attendee_query = f"""
-    SELECT DISTINCT Company_Name
-    FROM `{destination_table}`
-    WHERE Organizer_Name LIKE @organizer_keyword
+    SELECT DISTINCT
+        t1.Company_Name
+    FROM
+        `mythical-envoy-386309.majisemi.majisemi_seminar_data` AS t1
+    INNER JOIN
+        `mythical-envoy-386309.majisemi.majisemi_followdata` AS t2 ON t1.Seminar_Id = t2.Seminar_Id
+    WHERE t1.Organizer_Name LIKE @organizer_keyword
     """
 
     if where_clauses:
         attendee_query += f" AND {' AND '.join(where_clauses)}"
 
     try:
-        attendee_data = run_query(attendee_query, query_parameters)
+        attendee_data = run_query(attendee_query, [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)])
+        # attendee_dataから会社名リストを作成
+        filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
+        filtered_companies = list(set(filtered_companies))  # 重複を削除
+
+        if filtered_companies:
+            st.write("フィルタリング後の企業:", filtered_companies)
+
+            # 会社名をエスケープする関数
+            def escape_company_name(name):
+                return name.replace("'", "''")
+
+            # エスケープした会社名のリストを作成
+            escaped_companies = [escape_company_name(company) for company in filtered_companies]
+
+            # IN句の代わりにUNNESTを使用
+            all_seminars_query = f"""
+            SELECT *
+            FROM `{destination_table}`
+            WHERE Company_Name IN UNNEST(@companies)
+            AND Seminar_Date >= @three_months_ago
+            ORDER BY Company_Name, Seminar_Date
+            """
+
+            query_params = [
+                bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
+                bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))
+            ]
+
+            try:
+                all_seminars_data = run_query(all_seminars_query, query_params)
+            except Exception as e:
+                st.error(f"BigQueryのクエリに失敗しました: {e}")
+                st.stop()
+
+            def calculate_score(row):
+                score = 0
+                if row['Status'] == '出席':
+                    score += 3
+                if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
+                    score += 3
+                if row.get('Desired_Follow_Up_Actions') is not None:
+                    if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
+                        score += 5
+                    elif '資料希望' in row['Desired_Follow_Up_Actions']:
+                        score += 3
+                if row.get('Pre_Seminar_Survey_Answer_2') == '既に同様の商品・サービスを導入済み':
+                    score += 3
+                elif row.get('Pre_Seminar_Survey_Answer_2') == '既に候補の製品・サービスを絞っており、その評価・選定をしている':
+                        score += 3
+                elif row.get('Pre_Seminar_Survey_Answer_2') == '製品・サービスの候補を探している':
+                    score += 2
+                elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）':
+                    score += 1
+                return score
+
+            company_scores = {}
+            for row in all_seminars_data:
+                company_name = row['Company_Name']
+                score = calculate_score(row)
+                if company_name in company_scores:
+                    company_scores[company_name] += score
+                else:
+                    company_scores[company_name] = score
+
+            sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
+
+            st.header("トップ3企業:")
+            for i in range(min(3, len(sorted_scores))):
+                company_name, score = sorted_scores[i]
+                st.write(f"{i + 1}. {company_name}: {score}点")
+
+            def generate_wordcloud(font_path, text, title):
+                t = Tokenizer()
+                tokens = t.tokenize(text)
+                words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
+
+                words = [word for word in words if len(word) > 1]
+                words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
+                words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
+
+                exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
+                                 '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+                words = [word for word in words if word not in exclude_words]
+
+                wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
+
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.set_title(title)
+                ax.axis('off')
+                st.pyplot(fig)
+
+            st.header("セミナータイトルワードクラウド")
+            for i in range(min(3, len(sorted_scores))):
+                company_name, _ = sorted_scores[i]
+                seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
+                generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
+
+        else:
+            st.warning("キーワードに一致する企業が見つかりませんでした。")
     except Exception as e:
         st.error(f"BigQueryのクエリに失敗しました: {e}")
         st.stop()
-
-    filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
-    filtered_companies = list(set(filtered_companies))  # 重複を削除
-
-    if filtered_companies:
-        # 会社名をエスケープする関数
-        def escape_company_name(name):
-            return name.replace("'", "''")
-
-        # エスケープした会社名のリストを作成
-        escaped_companies = [escape_company_name(company) for company in filtered_companies]
-
-        # IN句の代わりにUNNESTを使用
-        all_seminars_query = f"""
-        SELECT *
-        FROM `{destination_table}`
-        WHERE Company_Name IN UNNEST(@companies)
-        AND Seminar_Date >= @three_months_ago
-        ORDER BY Company_Name, Seminar_Date
-        """
-
-        query_params = [
-            bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
-            bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))
-        ]
-
-        try:
-            all_seminars_data = run_query(all_seminars_query, query_params)
-        except Exception as e:
-            st.error(f"BigQueryのクエリに失敗しました: {e}")
-            st.stop()
-
-        def calculate_score(row):
-            score = 0
-            if row['Status'] == '出席':
-                score += 3
-            if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
-                score += 3
-            if row.get('Desired_Follow_Up_Actions') is not None:
-                if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
-                    score += 5
-                elif '資料希望' in row['Desired_Follow_Up_Actions']:
-                    score += 3
-            if row.get('Pre_Seminar_Survey_Answer_2') == '既に同様の商品・サービスを導入済み':
-                score += 3
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '既に候補の製品・サービスを絞っており、その評価・選定をしている':
-                score += 3
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '製品・サービスの候補を探している':
-                score += 2
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）':
-                score += 1
-            return score
-
-        company_scores = {}
-        for row in all_seminars_data:
-            company_name = row['Company_Name']
-            score = calculate_score(row)
-            if company_name in company_scores:
-                company_scores[company_name] += score
-            else:
-                company_scores[company_name] = score
-
-        sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
-
-        st.header("トップ3企業:")
-        for i in range(min(3, len(sorted_scores))):
-            company_name, score = sorted_scores[i]
-            st.write(f"{i + 1}. {company_name}: {score}点")
-
-        def generate_wordcloud(font_path, text, title):
-            t = Tokenizer()
-            tokens = t.tokenize(text)
-            words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
-
-            words = [word for word in words if len(word) > 1]
-            words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
-            words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
-
-            exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
-                             '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
-            words = [word for word in words if word not in exclude_words]
-
-            wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
-
-            fig, ax = plt.subplots(figsize=(10, 5))
-            ax.imshow(wordcloud, interpolation='bilinear')
-            ax.set_title(title)
-            ax.axis('off')
-            st.pyplot(fig)
-
-        st.header("セミナータイトルワードクラウド")
-        for i in range(min(3, len(sorted_scores))):
-            company_name, _ = sorted_scores[i]
-            seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
-            generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
-
-    else:
-        st.warning("キーワードに一致する企業が見つかりませんでした。")
-
-# 全選択/全解除ボタンを追加
-st.sidebar.subheader("選択操作")
-if st.sidebar.button("全て選択"):
-    for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
-        if isinstance(grid["data"], pd.DataFrame):  # 型チェックを追加
-            grid['selected_rows'] = grid["data"].to_dict('records') 
-        else:
-            grid['selected_rows'] = []  # DataFrame型でない場合は空のリストを設定
-    st.experimental_rerun()
-
-if st.sidebar.button("全て解除"):
-    for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
-        grid['selected_rows'] = []
-    st.experimental_rerun()
