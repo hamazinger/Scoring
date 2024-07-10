@@ -150,13 +150,13 @@ if execute_button:
         SELECT *
         FROM `{followdata_table}`
         WHERE Company_Name IN UNNEST(@companies)
-        AND Seminar_Date >= @three_months_ago
+        AND PARSE_DATE('%Y-%m-%d', Seminar_Date) >= @three_months_ago
         ORDER BY Company_Name, Seminar_Date
         """
 
         query_params = [
             bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
-            bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))
+            bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.date())
         ]
 
         # デバッグ: all_seminars_queryとquery_paramsを表示
