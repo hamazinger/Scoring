@@ -98,8 +98,8 @@ with col2:
         height=350,
     )
     selected_rows_employee_sizes = grid_response_employee_sizes.get('selected_rows', [])
-    # 修正箇所: キーを使わずに値を取得
-    selected_employee_sizes = [list(row.values())[0] for row in selected_rows_employee_sizes] if selected_rows_employee_sizes else []
+    # 修正後: 要素をそのままリストに追加
+    selected_employee_sizes = [row['Employee_Size'] for row in selected_rows_employee_sizes] if selected_rows_employee_sizes else []
 
 # --- 役職選択 ---
 with col3:
@@ -126,8 +126,8 @@ with col3:
         height=350,
     )
     selected_rows_positions = grid_response_positions.get('selected_rows', [])
-    # 修正箇所: キーを使わずに値を取得
-    selected_positions = [list(row.values())[0] for row in selected_rows_positions] if selected_rows_positions else []
+    # 修正後: 要素をそのままリストに追加
+    selected_positions = [row['Position_Category'] for row in selected_rows_positions] if selected_rows_positions else []
 
 # 実行ボタンを追加
 execute_button = st.button("実行")
