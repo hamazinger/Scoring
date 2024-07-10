@@ -214,7 +214,8 @@ if execute_button:
         # スコア計算のデバッグ出力
         st.write("スコア計算のデバッグ:")
         company_scores = {}
-        for i, row in enumerate(all_seminars_data[:5]):  # 最初の5件のみ表示
+        # all_seminars_data全体をループするように修正
+        for i, row in enumerate(all_seminars_data):
             score = calculate_score(row)
             st.write(f"企業: {row['Company_Name']}, スコア: {score}")
             if i == 0:
