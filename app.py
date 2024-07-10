@@ -78,9 +78,13 @@ if execute_button:
     three_months_ago = today - timedelta(days=90)
 
     organizer_keyword_with_wildcard = f"%{organizer_keyword}%"
+    organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword]) + "％"
 
     where_clauses = []
-    query_parameters = [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)]
+    query_parameters = [
+        bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
+        bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width)
+    ]
 
     if selected_industries:
         industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
@@ -103,7 +107,8 @@ if execute_button:
         Company_Name
     FROM
         `{followdata_table}`
-    WHERE Organizer_Name LIKE @organizer_keyword
+    WHERE (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
+           OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
     """
 
     if where_clauses:
