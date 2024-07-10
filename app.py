@@ -87,26 +87,10 @@ if execute_button:
     organizer_keyword_with_wildcard = f"%{organizer_keyword}%"
     organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword]) + "％"
 
-    where_clauses = []
     query_parameters = [
         bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
         bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width)
     ]
-
-    if selected_industries:
-        industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
-        where_clauses.append(f"({industry_conditions})")
-        query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
-
-    if selected_employee_sizes:
-        employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
-        where_clauses.append(f"({employee_size_conditions})")
-        query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
-
-    if selected_positions:
-        position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
-        where_clauses.append(f"({position_conditions})")
-        query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
     # クエリを修正
     attendee_query = f"""
@@ -118,8 +102,20 @@ if execute_button:
            OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
     """
 
-    if where_clauses:
-        attendee_query += f" AND {' AND '.join(where_clauses)}"
+    if selected_industries:
+        industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
+        attendee_query += f" AND ({industry_conditions})"
+        query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
+
+    if selected_employee_sizes:
+        employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
+        attendee_query += f" AND ({employee_size_conditions})"
+        query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
+
+    if selected_positions:
+        position_conditions = " OR ".join([f"Position_Category LIKE '%' || @position_{i} || '%'" for i in range(len(selected_positions))])
+        attendee_query += f" AND ({position_conditions})"
+        query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
     # デバッグ: クエリとパラメータを表示
     show_query_and_params(attendee_query, query_parameters)
@@ -233,12 +229,25 @@ if execute_button:
             
             # デバッグ: データベースの内容を確認
             sample_query = f"""
-            SELECT DISTINCT Organizer_Name
+            SELECT DISTINCT Organizer_Name, User_Company, Employee_Size, Position_Category
             FROM `{followdata_table}`
+            ORDER BY Seminar_Date DESC
             LIMIT 10
             """
             sample_data = run_query(sample_query)
-            st.write("データベース内の主催企業名のサンプル:", [row['Organizer_Name'] for row in sample_data])
+            st.write("直近のデータサンプル:", sample_data)
+
+            # 各条件に一致するデータ数を確認
+            for condition, name in [("User_Company", "業種"), ("Employee_Size", "従業員規模"), ("Position_Category", "役職")]:
+                count_query = f"""
+                SELECT {condition}, COUNT(*) as count
+                FROM `{followdata_table}`
+                GROUP BY {condition}
+                ORDER BY count DESC
+                LIMIT 10
+                """
+                count_data = run_query(count_query)
+                st.write(f"{name}ごとのデータ数:", count_data)
 
     except Exception as e:
         st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
