@@ -95,7 +95,7 @@ if execute_button:
         bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
     ]
 
-    # クエリを修正
+    # クエリを修正: 主催企業名で絞り込んだ後、ORで業種、従業員規模、役職の絞り込みを行う
     attendee_query = f"""
     SELECT DISTINCT
         Company_Name, Organizer_Name
@@ -105,20 +105,25 @@ if execute_button:
            OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
     """
 
+    # OR条件を追加
+    additional_conditions = []
     if selected_industries:
         industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
-        attendee_query += f" AND ({industry_conditions})"
+        additional_conditions.append(f"({industry_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
 
     if selected_employee_sizes:
         employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
-        attendee_query += f" AND ({employee_size_conditions})"
+        additional_conditions.append(f"({employee_size_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
 
     if selected_positions:
         position_conditions = " OR ".join([f"Position_Category LIKE '%' || @position_{i} || '%'" for i in range(len(selected_positions))])
-        attendee_query += f" AND ({position_conditions})"
+        additional_conditions.append(f"({position_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
+
+    if additional_conditions:
+        attendee_query += " AND (" + " OR ".join(additional_conditions) + ")"
 
     # デバッグ: クエリとパラメータを表示
     show_query_and_params(attendee_query, query_parameters)
