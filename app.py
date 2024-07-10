@@ -22,7 +22,6 @@ except KeyError:
     st.stop()
 
 # テーブル名を完全修飾名で指定
-seminar_data_table = "mythical-envoy-386309.majisemi.majisemi_seminar_data"
 followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
@@ -84,29 +83,27 @@ if execute_button:
     query_parameters = [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)]
 
     if selected_industries:
-        industry_conditions = " OR ".join([f"t2.User_Company = @industry_{i}" for i in range(len(selected_industries))])
+        industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
         where_clauses.append(f"({industry_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
 
     if selected_employee_sizes:
-        employee_size_conditions = " OR ".join([f"t2.Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
+        employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
 
     if selected_positions:
-        position_conditions = " OR ".join([f"t2.Position_Category = @position_{i}" for i in range(len(selected_positions))])
+        position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
     # クエリを修正
     attendee_query = f"""
     SELECT DISTINCT
-        t2.Company_Name
+        Company_Name
     FROM
-        `{seminar_data_table}` AS t1
-    INNER JOIN
-        `{followdata_table}` AS t2 ON t1.Seminar_Id = t2.Seminar_Id
-    WHERE t1.Organizer_Name LIKE @organizer_keyword
+        `{followdata_table}`
+    WHERE Organizer_Name LIKE @organizer_keyword
     """
 
     if where_clauses:
