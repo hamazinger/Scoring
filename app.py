@@ -21,7 +21,9 @@ except KeyError:
     st.error("GCPの認証情報が見つかりません。StreamlitのSecretsに設定してください。")
     st.stop()
 
-destination_table = "mythical-envoy-386309.majisemi.majisemi_followdata"  # テーブルIDを修正
+# テーブル名を完全修飾名で指定
+seminar_data_table = "mythical-envoy-386309.majisemi.majisemi_seminar_data"
+followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
 @st.cache_data(ttl=600)
@@ -35,7 +37,7 @@ def run_query(query: str, _params=None):
     return rows
 
 # ユーザーがキーワードを入力できるようにする
-organizer_keyword = st.text_input("主催企業名を入力してください：", "")  # 初期値を空にする
+organizer_keyword = st.text_input("主催企業名を入力してください：", "")
 
 # カテゴリ選択を横に3つ並べる
 col1, col2, col3 = st.columns(3)
@@ -79,31 +81,31 @@ if execute_button:
     organizer_keyword_with_wildcard = f"%{organizer_keyword}%"
 
     where_clauses = []
-    query_parameters = []
+    query_parameters = [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)]
 
     if selected_industries:
-        industry_conditions = " OR ".join([f"User_Company = @industry_{i}" for i in range(len(selected_industries))])
+        industry_conditions = " OR ".join([f"t2.User_Company = @industry_{i}" for i in range(len(selected_industries))])
         where_clauses.append(f"({industry_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
 
     if selected_employee_sizes:
-        employee_size_conditions = " OR ".join([f"Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
+        employee_size_conditions = " OR ".join([f"t2.Employee_Size = @employee_size_{i}" for i in range(len(selected_employee_sizes))])
         where_clauses.append(f"({employee_size_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
 
     if selected_positions:
-        position_conditions = " OR ".join([f"Position_Category = @position_{i}" for i in range(len(selected_positions))])
+        position_conditions = " OR ".join([f"t2.Position_Category = @position_{i}" for i in range(len(selected_positions))])
         where_clauses.append(f"({position_conditions})")
         query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
     # クエリを修正
     attendee_query = f"""
     SELECT DISTINCT
-        t1.Company_Name
+        t2.Company_Name
     FROM
-        `mythical-envoy-386309.majisemi.majisemi_seminar_data` AS t1
+        `{seminar_data_table}` AS t1
     INNER JOIN
-        `mythical-envoy-386309.majisemi.majisemi_followdata` AS t2 ON t1.Seminar_Id = t2.Seminar_Id
+        `{followdata_table}` AS t2 ON t1.Seminar_Id = t2.Seminar_Id
     WHERE t1.Organizer_Name LIKE @organizer_keyword
     """
 
@@ -111,7 +113,7 @@ if execute_button:
         attendee_query += f" AND {' AND '.join(where_clauses)}"
 
     try:
-        attendee_data = run_query(attendee_query, [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)] + query_parameters)
+        attendee_data = run_query(attendee_query, query_parameters)
         # attendee_dataから会社名リストを作成
         filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
         filtered_companies = list(set(filtered_companies))  # 重複を削除
@@ -129,7 +131,7 @@ if execute_button:
             # IN句の代わりにUNNESTを使用
             all_seminars_query = f"""
             SELECT *
-            FROM `{destination_table}`
+            FROM `{followdata_table}`
             WHERE Company_Name IN UNNEST(@companies)
             AND Seminar_Date >= @three_months_ago
             ORDER BY Company_Name, Seminar_Date
@@ -143,7 +145,7 @@ if execute_button:
             try:
                 all_seminars_data = run_query(all_seminars_query, query_params)
             except Exception as e:
-                st.error(f"BigQueryのクエリに失敗しました: {e}")
+                st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
                 st.stop()
 
             def calculate_score(row):
@@ -213,5 +215,5 @@ if execute_button:
         else:
             st.warning("キーワードに一致する企業が見つかりませんでした。")
     except Exception as e:
-        st.error(f"BigQueryのクエリに失敗しました: {e}")
+        st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
         st.stop()
