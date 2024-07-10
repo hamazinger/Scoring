@@ -159,10 +159,29 @@ if execute_button:
             bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.strftime('%Y-%m-%d'))
         ]
 
+        # デバッグ: all_seminars_queryとquery_paramsを表示
+        st.write("all_seminars_query:", all_seminars_query)
+        st.write("query_params:", query_params)
+
+        # テーブルの内容をサンプリングするクエリ
+        sample_query = f"""
+        SELECT *
+        FROM `{followdata_table}`
+        LIMIT 10
+        """
+
+        try:
+            sample_data = run_query(sample_query)
+            st.write("テーブルのサンプルデータ:", sample_data)
+        except Exception as e:
+            st.error(f"サンプルデータの取得に失敗しました: {str(e)}")
+
         try:
             all_seminars_data = run_query(all_seminars_query, query_params)
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
+            st.error(f"クエリ: {all_seminars_query}")
+            st.error(f"パラメータ: {query_params}")
             st.stop()
 
         # all_seminars_dataの内容を確認
