@@ -165,47 +165,49 @@ if execute_button:
             st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
             st.stop()
 
+        # all_seminars_dataの内容を確認
+        st.write("all_seminars_dataの長さ:", len(all_seminars_data))
+        st.write("all_seminars_dataの最初の5件:", all_seminars_data[:5])
+
         def calculate_score(row):
             score = 0
             if row['Status'] == '出席':
                 score += 3
             if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
                 score += 3
-            if row.get('Desired_Follow_Up_Actions') is not None:
+            if row.get('Desired_Follow_Up_Actions'):
                 if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
                     score += 5
                 elif '資料希望' in row['Desired_Follow_Up_Actions']:
                     score += 3
-            if row.get('Pre_Seminar_Survey_Answer_2') == '既に同様の商品・サービスを導入済み':
-                score += 3
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '既に候補の製品・サービスを絞っており、その評価・選定をしている':
+            if row.get('Pre_Seminar_Survey_Answer_2'):
+                if '既に同様の商品・サービスを導入済み' in row['Pre_Seminar_Survey_Answer_2']:
                     score += 3
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '製品・サービスの候補を探している':
-                score += 2
-            elif row.get('Pre_Seminar_Survey_Answer_2') == '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）':
-                score += 1
+                elif '既に候補の製品・サービスを絞っており、その評価・選定をしている' in row['Pre_Seminar_Survey_Answer_2']:
+                    score += 3
+                elif '製品・サービスの候補を探している' in row['Pre_Seminar_Survey_Answer_2']:
+                    score += 2
+                elif '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）' in row['Pre_Seminar_Survey_Answer_2']:
+                    score += 1
             return score
 
         # スコア計算のデバッグ出力
         st.write("スコア計算のデバッグ:")
+        company_scores = {}
         for i, row in enumerate(all_seminars_data[:5]):  # 最初の5件のみ表示
             score = calculate_score(row)
             st.write(f"企業: {row['Company_Name']}, スコア: {score}")
             if i == 0:
                 st.write("スコア計算の詳細:", row)
-
-        company_scores = {}
-        for row in all_seminars_data:
+            
             company_name = row['Company_Name']
-            score = calculate_score(row)
             if company_name in company_scores:
                 company_scores[company_name] += score
             else:
                 company_scores[company_name] = score
 
-        sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
-
         # ソート後のスコアを確認
+        sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
         if sorted_scores:
             st.write(f"ソート後の企業数: {len(sorted_scores)}")
             st.write("上位10社のスコア:", sorted_scores[:10])
