@@ -68,8 +68,12 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    if not isinstance(grid_response_industries.get('data'), pd.DataFrame):
+        grid_response_industries['data'] = pd.DataFrame(grid_response_industries.get('data', []))
     selected_rows_industries = grid_response_industries.get('selected_rows', [])
-    st.write("デバッグ: selected_rows_industries", selected_rows_industries)  # デバッグ用に追加
+    st.write("デバッグ: selected_rows_industries", selected_rows_industries)
+    st.write("デバッグ: grid_response_industries['data'] type", type(grid_response_industries['data']))
+    st.write("デバッグ: grid_response_industries['data'] content", grid_response_industries['data'])
 
     selected_industries = [row["User_Company"] for row in selected_rows_industries] if selected_rows_industries else []
 
@@ -99,8 +103,12 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    if not isinstance(grid_response_employee_sizes.get('data'), pd.DataFrame):
+        grid_response_employee_sizes['data'] = pd.DataFrame(grid_response_employee_sizes.get('data', []))
     selected_rows_employee_sizes = grid_response_employee_sizes.get('selected_rows', [])
-    st.write("デバッグ: selected_rows_employee_sizes", selected_rows_employee_sizes)  # デバッグ用に追加
+    st.write("デバッグ: selected_rows_employee_sizes", selected_rows_employee_sizes)
+    st.write("デバッグ: grid_response_employee_sizes['data'] type", type(grid_response_employee_sizes['data']))
+    st.write("デバッグ: grid_response_employee_sizes['data'] content", grid_response_employee_sizes['data'])
 
     selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes] if selected_rows_employee_sizes else []
 
@@ -128,8 +136,12 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
+    if not isinstance(grid_response_positions.get('data'), pd.DataFrame):
+        grid_response_positions['data'] = pd.DataFrame(grid_response_positions.get('data', []))
     selected_rows_positions = grid_response_positions.get('selected_rows', [])
-    st.write("デバッグ: selected_rows_positions", selected_rows_positions)  # デバッグ用に追加
+    st.write("デバッグ: selected_rows_positions", selected_rows_positions)
+    st.write("デバッグ: grid_response_positions['data'] type", type(grid_response_positions['data']))
+    st.write("デバッグ: grid_response_positions['data'] content", grid_response_positions['data'])
 
     selected_positions = [row["Position_Category"] for row in selected_rows_positions] if selected_rows_positions else []
 
@@ -274,7 +286,8 @@ if execute_button:
             words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
 
             exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
-                             '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+                             '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査',
+                             '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
             words = [word for word in words if word not in exclude_words]
 
             wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
@@ -341,7 +354,10 @@ if execute_button:
 st.sidebar.subheader("選択操作")
 if st.sidebar.button("全て選択"):
     for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
-        grid['selected_rows'] = grid["data"].to_dict('records')
+        if isinstance(grid.get('data'), pd.DataFrame):
+            grid['selected_rows'] = grid['data'].to_dict('records')
+        else:
+            grid['selected_rows'] = grid.get('data', [])
     st.experimental_rerun()
 
 if st.sidebar.button("全て解除"):
