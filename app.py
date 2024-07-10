@@ -81,9 +81,9 @@ execute_button = st.button("実行")
 
 # ボタンが押された場合のみ処理を実行
 if execute_button:
-    # three_months_agoの計算を修正
+    # 1年前の日付を計算
     today = datetime.today()
-    three_months_ago = today - timedelta(days=90)
+    one_year_ago = today - timedelta(days=365)
 
     organizer_keyword_with_wildcard = f"%{organizer_keyword}%"
     organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword]) + "％"
@@ -151,13 +151,13 @@ if execute_button:
         SELECT *
         FROM `{followdata_table}`
         WHERE Company_Name IN UNNEST(@companies)
-        AND Seminar_Date >= @three_months_ago
+        AND Seminar_Date >= @one_year_ago
         ORDER BY Company_Name, Seminar_Date
         """
 
         query_params = [
             bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
-            bigquery.ScalarQueryParameter("three_months_ago", "DATE", three_months_ago.date())
+            bigquery.ScalarQueryParameter("one_year_ago", "DATE", one_year_ago.date())
         ]
 
         # デバッグ: all_seminars_queryとquery_paramsを表示
