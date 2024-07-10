@@ -90,7 +90,8 @@ if execute_button:
 
     query_parameters = [
         bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
-        bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width)
+        bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width),
+        bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
     ]
 
     # クエリを修正
@@ -146,17 +147,21 @@ if execute_button:
         # エスケープした会社名のリストを作成
         escaped_companies = [escape_company_name(company) for company in filtered_companies]
 
-        # IN句の代わりにUNNESTを使用
+        # all_seminars_query に主催企業名による絞り込みを追加
         all_seminars_query = f"""
         SELECT *
         FROM `{followdata_table}`
-        WHERE Company_Name IN UNNEST(@companies)
-        AND Seminar_Date >= @three_years_ago
+        WHERE Company_Name IN UNNEST(@companies) 
+          AND (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
+           OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
+          AND Seminar_Date >= @three_years_ago
         ORDER BY Company_Name, Seminar_Date
         """
 
         query_params = [
             bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
+            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
+            bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width),
             bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
         ]
 
