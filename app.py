@@ -81,6 +81,7 @@ execute_button = st.button("実行")
 
 # ボタンが押された場合のみ処理を実行
 if execute_button:
+    # three_months_agoの計算を修正
     today = datetime.today()
     three_months_ago = today - timedelta(days=90)
 
