@@ -211,21 +211,21 @@ if execute_button:
                     score += 1
             return score
 
-        # スコア計算のデバッグ出力
-        st.write("スコア計算のデバッグ:")
-        company_scores = {}
-        # all_seminars_data全体をループするように修正
-        for i, row in enumerate(all_seminars_data):
-            score = calculate_score(row)
-            st.write(f"企業: {row['Company_Name']}, スコア: {score}")
-            if i == 0:
-                st.write("スコア計算の詳細:", row)
+        # # スコア計算のデバッグ出力
+        # st.write("スコア計算のデバッグ:")
+        # company_scores = {}
+        # # all_seminars_data全体をループするように修正
+        # for i, row in enumerate(all_seminars_data):
+        #     score = calculate_score(row)
+        #     st.write(f"企業: {row['Company_Name']}, スコア: {score}")
+        #     if i == 0:
+        #         st.write("スコア計算の詳細:", row)
             
-            company_name = row['Company_Name']
-            if company_name in company_scores:
-                company_scores[company_name] += score
-            else:
-                company_scores[company_name] = score
+        #     company_name = row['Company_Name']
+        #     if company_name in company_scores:
+        #         company_scores[company_name] += score
+        #     else:
+        #         company_scores[company_name] = score
 
         # ソート後のスコアを確認
         sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
