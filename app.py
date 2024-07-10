@@ -35,6 +35,13 @@ def run_query(query: str, _params=None):
     rows = [dict(row) for row in rows_raw]
     return rows
 
+# デバッグ用：クエリとパラメータを表示する関数
+def show_query_and_params(query, params):
+    st.text("実行されたクエリ:")
+    st.code(query)
+    st.text("クエリパラメータ:")
+    st.json({p.name: p.value for p in params})
+
 # ユーザーがキーワードを入力できるようにする
 organizer_keyword = st.text_input("主催企業名を入力してください：", "")
 
@@ -104,7 +111,7 @@ if execute_button:
     # クエリを修正
     attendee_query = f"""
     SELECT DISTINCT
-        Company_Name
+        Company_Name, Organizer_Name
     FROM
         `{followdata_table}`
     WHERE (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
@@ -114,8 +121,15 @@ if execute_button:
     if where_clauses:
         attendee_query += f" AND {' AND '.join(where_clauses)}"
 
+    # デバッグ: クエリとパラメータを表示
+    show_query_and_params(attendee_query, query_parameters)
+
     try:
         attendee_data = run_query(attendee_query, query_parameters)
+        
+        # デバッグ: クエリの結果を表示
+        st.write("クエリ結果:", attendee_data)
+
         # attendee_dataから会社名リストを作成
         filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
         filtered_companies = list(set(filtered_companies))  # 重複を削除
@@ -216,6 +230,16 @@ if execute_button:
 
         else:
             st.warning("キーワードに一致する企業が見つかりませんでした。")
+            
+            # デバッグ: データベースの内容を確認
+            sample_query = f"""
+            SELECT DISTINCT Organizer_Name
+            FROM `{followdata_table}`
+            LIMIT 10
+            """
+            sample_data = run_query(sample_query)
+            st.write("データベース内の主催企業名のサンプル:", [row['Organizer_Name'] for row in sample_data])
+
     except Exception as e:
         st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
         st.stop()
