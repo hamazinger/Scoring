@@ -150,7 +150,7 @@ if execute_button:
         SELECT *
         FROM `{followdata_table}`
         WHERE Company_Name IN UNNEST(@companies)
-        AND PARSE_DATE('%Y-%m-%d', Seminar_Date) >= @three_months_ago
+        AND Seminar_Date >= @three_months_ago
         ORDER BY Company_Name, Seminar_Date
         """
 
