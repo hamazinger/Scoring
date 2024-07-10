@@ -85,8 +85,9 @@ if execute_button:
     today = datetime.today()
     three_years_ago = today - timedelta(days=365*3)
 
-    organizer_keyword_with_wildcard = f"%{organizer_keyword}%"
-    organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword]) + "％"
+    # 全角・半角を統一
+    organizer_keyword_with_wildcard = f"%{organizer_keyword.replace(' ', '')}%"
+    organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword.replace(' ', '')]) + "％"
 
     query_parameters = [
         bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
@@ -152,9 +153,9 @@ if execute_button:
         SELECT *
         FROM `{followdata_table}`
         WHERE Company_Name IN UNNEST(@companies) 
-          AND (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
+          AND ((LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
            OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
-          AND Seminar_Date >= @three_years_ago
+          AND Seminar_Date >= @three_years_ago)
         ORDER BY Company_Name, Seminar_Date
         """
 
@@ -192,7 +193,10 @@ if execute_button:
 
         # all_seminars_dataの内容を確認
         st.write("all_seminars_dataの長さ:", len(all_seminars_data))
-        # st.write("all_seminars_dataの最初の5件:", all_seminars_data[:5])
+
+        # デバッグ: all_seminars_data から主催企業名のみを抽出
+        organizer_names_in_result = list(set([row['Organizer_Name'] for row in all_seminars_data]))
+        st.write("all_seminars_data に含まれる主催企業名:", organizer_names_in_result)
 
         def calculate_score(row):
             score = 0
