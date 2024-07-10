@@ -274,7 +274,7 @@ if execute_button:
 st.sidebar.subheader("選択操作")
 if st.sidebar.button("全て選択"):
     for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
-        grid['selected_rows'] = grid["data"].to_dict('records')
+        grid['selected_rows'] = grid["data"].to_dict('records') if grid["data"] is not None else []  # 修正箇所
     st.experimental_rerun()
 
 if st.sidebar.button("全て解除"):
