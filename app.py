@@ -68,13 +68,7 @@ with col1:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    if not isinstance(grid_response_industries.get('data'), pd.DataFrame):
-        grid_response_industries['data'] = pd.DataFrame(grid_response_industries.get('data', []))
     selected_rows_industries = grid_response_industries.get('selected_rows', [])
-    st.write("デバッグ: selected_rows_industries", selected_rows_industries)
-    st.write("デバッグ: grid_response_industries['data'] type", type(grid_response_industries['data']))
-    st.write("デバッグ: grid_response_industries['data'] content", grid_response_industries['data'])
-
     selected_industries = [row["User_Company"] for row in selected_rows_industries] if selected_rows_industries else []
 
 # --- 従業員規模選択 ---
@@ -103,13 +97,7 @@ with col2:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    if not isinstance(grid_response_employee_sizes.get('data'), pd.DataFrame):
-        grid_response_employee_sizes['data'] = pd.DataFrame(grid_response_employee_sizes.get('data', []))
     selected_rows_employee_sizes = grid_response_employee_sizes.get('selected_rows', [])
-    st.write("デバッグ: selected_rows_employee_sizes", selected_rows_employee_sizes)
-    st.write("デバッグ: grid_response_employee_sizes['data'] type", type(grid_response_employee_sizes['data']))
-    st.write("デバッグ: grid_response_employee_sizes['data'] content", grid_response_employee_sizes['data'])
-
     selected_employee_sizes = [row["Employee_Size"] for row in selected_rows_employee_sizes] if selected_rows_employee_sizes else []
 
 # --- 役職選択 ---
@@ -136,13 +124,7 @@ with col3:
         fit_columns_on_grid_load=True,
         height=350,
     )
-    if not isinstance(grid_response_positions.get('data'), pd.DataFrame):
-        grid_response_positions['data'] = pd.DataFrame(grid_response_positions.get('data', []))
     selected_rows_positions = grid_response_positions.get('selected_rows', [])
-    st.write("デバッグ: selected_rows_positions", selected_rows_positions)
-    st.write("デバッグ: grid_response_positions['data'] type", type(grid_response_positions['data']))
-    st.write("デバッグ: grid_response_positions['data'] content", grid_response_positions['data'])
-
     selected_positions = [row["Position_Category"] for row in selected_rows_positions] if selected_rows_positions else []
 
 # 実行ボタンを追加
@@ -184,28 +166,14 @@ if execute_button:
     if where_clauses:
         attendee_query += f" AND {' AND '.join(where_clauses)}"
 
-    # デバッグ情報の表示
-    st.write("デバッグ: 選択された業種", selected_industries)
-    st.write("デバッグ: 選択された従業員規模", selected_employee_sizes)
-    st.write("デバッグ: 選択された役職", selected_positions)
-    st.write("デバッグ: 主催企業キーワード", organizer_keyword)
-    st.write("デバッグ: 生成されたクエリ", attendee_query)
-    st.write("デバッグ: クエリパラメータ", query_parameters)
-    st.write("デバッグ: where_clauses", where_clauses)
-
     try:
         attendee_data = run_query(attendee_query, query_parameters)
-        st.write("デバッグ: attendee_data", attendee_data)
     except Exception as e:
         st.error(f"BigQueryのクエリに失敗しました: {e}")
         st.stop()
 
     filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
     filtered_companies = list(set(filtered_companies))  # 重複を削除
-
-    st.write("デバッグ: フィルタリング前の企業数", len(attendee_data))
-    st.write("デバッグ: フィルタリング後の企業数", len(filtered_companies))
-    st.write("デバッグ: フィルタリング後の企業", filtered_companies)
 
     if filtered_companies:
         # 会社名をエスケープする関数
@@ -234,10 +202,6 @@ if execute_button:
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {e}")
             st.stop()
-
-        # デバッグ情報の追加
-        st.write("デバッグ: all_seminars_query", all_seminars_query)
-        st.write("デバッグ: query_params", query_params)
 
         def calculate_score(row):
             score = 0
@@ -286,8 +250,7 @@ if execute_button:
             words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
 
             exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
-                             '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査',
-                             '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+                             '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
             words = [word for word in words if word not in exclude_words]
 
             wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
@@ -307,57 +270,11 @@ if execute_button:
     else:
         st.warning("キーワードに一致する企業が見つかりませんでした。")
 
-    # デバッグ情報の追加表示
-    st.subheader("デバッグ情報")
-    st.write("クエリ実行結果:")
-    st.json(attendee_data)
-    
-    st.write("選択された条件:")
-    st.write(f"業種: {selected_industries}")
-    st.write(f"従業員規模: {selected_employee_sizes}")
-    st.write(f"役職: {selected_positions}")
-    st.write(f"主催企業キーワード: {organizer_keyword}")
-
-    # データベースの内容サンプルを表示
-    sample_query = f"""
-    SELECT *
-    FROM `{destination_table}`
-    LIMIT 10
-    """
-    sample_data = run_query(sample_query, _params=[])
-    st.write("データベースのサンプルデータ:")
-    st.dataframe(sample_data)
-
-    # 条件に一致するレコードの数を確認
-    count_query = f"""
-    SELECT COUNT(*) as count
-    FROM `{destination_table}`
-    WHERE Organizer_Name LIKE @organizer_keyword
-    """
-    count_data = run_query(count_query, [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)])
-    st.write(f"主催企業名に '{organizer_keyword}' を含むレコード数: {count_data[0]['count']}")
-
-    # 各条件ごとのレコード数を確認
-    for condition in ['User_Company', 'Employee_Size', 'Position_Category']:
-        condition_query = f"""
-        SELECT {condition}, COUNT(*) as count
-        FROM `{destination_table}`
-        WHERE Organizer_Name LIKE @organizer_keyword
-        GROUP BY {condition}
-        ORDER BY count DESC
-        """
-        condition_data = run_query(condition_query, [bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard)])
-        st.write(f"{condition}ごとのレコード数:")
-        st.dataframe(condition_data)
-
 # 全選択/全解除ボタンを追加
 st.sidebar.subheader("選択操作")
 if st.sidebar.button("全て選択"):
     for grid in [grid_response_industries, grid_response_employee_sizes, grid_response_positions]:
-        if isinstance(grid.get('data'), pd.DataFrame):
-            grid['selected_rows'] = grid['data'].to_dict('records')
-        else:
-            grid['selected_rows'] = grid.get('data', [])
+        grid['selected_rows'] = grid["data"].to_dict('records')
     st.experimental_rerun()
 
 if st.sidebar.button("全て解除"):
