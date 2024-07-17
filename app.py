@@ -25,7 +25,8 @@ except KeyError:
 followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
-# @st.cache_data(ttl=600)  # キャッシュを無効化
+# キャッシュを無効化
+# @st.cache_data(ttl=600)
 def run_query(query: str, _params=None):
     job_config = bigquery.QueryJobConfig()
     if _params:
