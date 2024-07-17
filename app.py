@@ -284,7 +284,7 @@ if execute_button:
             ax.axis('off')
             st.pyplot(fig)
 
-        st.header("トップ3企業とセミナータイトルワードクラウド")
+        st.header("トップ3企業")
         for i in range(min(3, len(sorted_scores))):
             company_name, score = sorted_scores[i]
             st.subheader(f"{i + 1}. {company_name}: {score}点")
@@ -292,7 +292,8 @@ if execute_button:
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             if seminar_titles:
                 try:
-                    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
+                    # generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
+                    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
                 except Exception as e:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
             else:
