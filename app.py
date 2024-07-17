@@ -25,7 +25,7 @@ except KeyError:
 followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
-@st.cache_data(ttl=600)
+# @st.cache_data(ttl=600)  # キャッシュを無効化
 def run_query(query: str, _params=None):
     job_config = bigquery.QueryJobConfig()
     if _params:
@@ -81,6 +81,9 @@ execute_button = st.button("実行")
 
 # ボタンが押された場合のみ処理を実行
 if execute_button:
+    # キャッシュをクリア
+    st.cache_data.clear()
+
     # 3年前の日付を計算
     today = datetime.today()
     three_years_ago = today - timedelta(days=365*3)
@@ -213,6 +216,11 @@ if execute_button:
         organizer_names_in_result = list(set([row['Organizer_Name'] for row in all_seminars_data]))
         st.write("all_seminars_data に含まれる主催企業名:", organizer_names_in_result)
 
+        # 追加のデバッグ情報
+        st.write("Filtered by Organizer:", organizer_keyword)
+        st.write("Number of rows in all_seminars_data:", len(all_seminars_data))
+        st.write("Unique Organizer Names:", set([row['Organizer_Name'] for row in all_seminars_data]))
+
         def calculate_score(row):
             score = 0
             if row['Status'] == '出席':
@@ -271,6 +279,7 @@ if execute_button:
             exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
                              '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
             words = [word for word in words if word not in exclude_words]
+
             wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
 
             fig, ax = plt.subplots(figsize=(10, 5))
