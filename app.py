@@ -134,6 +134,9 @@ if execute_button:
         # デバッグ: クエリの結果を表示
         st.write("クエリ結果:", attendee_data)
 
+        # attendee_dataの内容を確認 (追加)
+        st.write("attendee_data:", attendee_data[:10])  # 最初の10件のみ表示
+
         # attendee_dataから会社名リストを作成
         filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
         filtered_companies = list(set(filtered_companies))  # 重複を削除
@@ -198,6 +201,12 @@ if execute_button:
 
         # all_seminars_dataの内容を確認
         st.write("all_seminars_dataの長さ:", len(all_seminars_data))
+
+        # all_seminars_dataの内容を詳細に確認 (追加)
+        st.write("all_seminars_data (最初の10件):", [
+            {k: v for k, v in row.items() if k in ['Company_Name', 'Organizer_Name', 'Seminar_Title']}
+            for row in all_seminars_data[:10]
+        ])
 
         # デバッグ: all_seminars_data から主催企業名のみを抽出
         organizer_names_in_result = list(set([row['Organizer_Name'] for row in all_seminars_data]))
