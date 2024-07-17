@@ -293,8 +293,8 @@ if execute_button:
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             if seminar_titles:
                 try:
-                    # generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}のセミナータイトルワードクラウド')
-                    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
+                    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}の関心キーワード')
+                    # generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
                 except Exception as e:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
             else:
