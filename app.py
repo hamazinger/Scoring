@@ -263,11 +263,6 @@ if execute_button:
             st.warning("スコア計算後の企業が見つかりませんでした。")
             st.stop()
 
-        st.header("トップ3企業:")
-        for i in range(min(3, len(sorted_scores))):
-            company_name, score = sorted_scores[i]
-            st.write(f"{i + 1}. {company_name}: {score}点")
-
         def generate_wordcloud(font_path, text, title):
             t = Tokenizer()
             tokens = t.tokenize(text)
@@ -289,9 +284,11 @@ if execute_button:
             ax.axis('off')
             st.pyplot(fig)
 
-        st.header("セミナータイトルワードクラウド")
+        st.header("トップ3企業とセミナータイトルワードクラウド")
         for i in range(min(3, len(sorted_scores))):
-            company_name, _ = sorted_scores[i]
+            company_name, score = sorted_scores[i]
+            st.subheader(f"{i + 1}. {company_name}: {score}点")
+            
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             if seminar_titles:
                 try:
@@ -300,6 +297,8 @@ if execute_button:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
             else:
                 st.warning(f"{company_name}のセミナータイトルが見つかりませんでした。")
+            
+            st.write("---")  # 各企業の間に区切り線を追加
 
     except Exception as e:
         st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
