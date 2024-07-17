@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from janome.tokenizer import Tokenizer
 import re
 
+
 # Streamlitアプリのタイトルを設定
 st.title("リードスコアリング")
 
