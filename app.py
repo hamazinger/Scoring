@@ -289,7 +289,8 @@ if execute_button:
         st.header("トップ3企業")
         for i in range(min(3, len(sorted_scores))):
             company_name, score = sorted_scores[i]
-            st.subheader(f"{i + 1}. {company_name}: {score}点")
+            # st.subheader(f"{i + 1}. {company_name}: {score}点")
+            st.subheader(f"{i + 1}. {company_name}")
             
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             if seminar_titles:
