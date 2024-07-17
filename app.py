@@ -264,7 +264,8 @@ if execute_button:
             st.warning("スコア計算後の企業が見つかりませんでした。")
             st.stop()
 
-        def generate_wordcloud(font_path, text, title):
+        # def generate_wordcloud(font_path, text, title):
+        def generate_wordcloud(font_path, text):
             t = Tokenizer()
             tokens = t.tokenize(text)
             words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
@@ -281,7 +282,7 @@ if execute_button:
 
             fig, ax = plt.subplots(figsize=(10, 5))
             ax.imshow(wordcloud, interpolation='bilinear')
-            ax.set_title(title)
+            # ax.set_title(title)
             ax.axis('off')
             st.pyplot(fig)
 
@@ -293,8 +294,8 @@ if execute_button:
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             if seminar_titles:
                 try:
-                    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}の関心キーワード')
-                    # generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
+                    # generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}の関心キーワード')
+                    generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
                 except Exception as e:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
             else:
