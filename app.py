@@ -89,6 +89,10 @@ if execute_button:
     organizer_keyword_with_wildcard = f"%{organizer_keyword.replace(' ', '')}%"
     organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword.replace(' ', '')]) + "％"
 
+    # デバッグ: キーワードの値を確認
+    st.write("organizer_keyword:", organizer_keyword_with_wildcard)
+    st.write("organizer_keyword_full:", organizer_keyword_full_width)
+
     query_parameters = [
         bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
         bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width),
@@ -132,10 +136,7 @@ if execute_button:
         attendee_data = run_query(attendee_query, query_parameters)
         
         # デバッグ: クエリの結果を表示
-        st.write("クエリ結果:", attendee_data)
-
-        # attendee_dataの内容を確認 (追加)
-        st.write("attendee_data:", attendee_data[:10])  # 最初の10件のみ表示
+        st.write("attendee_data (最初の10件):", attendee_data[:10])
 
         # attendee_dataから会社名リストを作成
         filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
@@ -160,9 +161,9 @@ if execute_button:
         all_seminars_query = f"""
         SELECT *
         FROM `{followdata_table}`
-        WHERE Company_Name IN UNNEST(@companies) 
-          AND (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
+        WHERE (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
            OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
+          AND Company_Name IN UNNEST(@companies) 
           AND Seminar_Date >= @three_years_ago
         ORDER BY Company_Name, Seminar_Date
         """
@@ -202,9 +203,9 @@ if execute_button:
         # all_seminars_dataの内容を確認
         st.write("all_seminars_dataの長さ:", len(all_seminars_data))
 
-        # all_seminars_dataの内容を詳細に確認 (追加)
+        # all_seminars_dataの内容をより詳細に確認
         st.write("all_seminars_data (最初の10件):", [
-            {k: v for k, v in row.items() if k in ['Company_Name', 'Organizer_Name', 'Seminar_Title']}
+            {k: v for k, v in row.items() if k in ['Company_Name', 'Organizer_Name', 'Seminar_Title', 'Seminar_Date']}
             for row in all_seminars_data[:10]
         ])
 
@@ -270,7 +271,6 @@ if execute_button:
             exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
                              '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
             words = [word for word in words if word not in exclude_words]
-
             wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
 
             fig, ax = plt.subplots(figsize=(10, 5))
