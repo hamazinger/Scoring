@@ -251,6 +251,10 @@ if execute_button:
             st.warning("スコア計算後の企業が見つかりませんでした。")
             st.stop()
 
+        # デバッグ情報を追加
+        st.write("Debug: company_scores:")
+        st.write(company_scores)
+
         def generate_wordcloud(font_path, text):
             t = Tokenizer()
             tokens = t.tokenize(text)
@@ -274,21 +278,29 @@ if execute_button:
         st.header("トップ3企業")
         for i in range(min(3, len(sorted_scores))):
             company_name, score = sorted_scores[i]
-            st.subheader(f"{i + 1}位. {company_name}")
+            st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
             
             # 主催企業以外のセミナータイトルのみを対象とする
-            seminar_titles = ' '.join([
-                row['Seminar_Title'] 
-                for row in all_seminars_data 
+            other_seminars = [
+                row for row in all_seminars_data 
                 if row['Company_Name'] == company_name and row['Organizer_Name'] != organizer_keyword
-            ])
-            if seminar_titles:
+            ]
+            
+            st.write(f"Debug: 他社セミナー参加数: {len(other_seminars)}")
+            
+            if other_seminars:
+                seminar_titles = ' '.join([row['Seminar_Title'] for row in other_seminars])
                 try:
                     generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
                 except Exception as e:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
             else:
                 st.warning(f"{company_name}の他社セミナー参加履歴が見つかりませんでした。")
+            
+            # 参加したセミナーの詳細情報を表示
+            st.write("参加セミナー詳細:")
+            for seminar in other_seminars[:5]:  # 最初の5件のみ表示
+                st.write(f"- {seminar['Seminar_Title']} (主催: {seminar['Organizer_Name']})")
             
             st.write("---")  # 各企業の間に区切り線を追加
 
