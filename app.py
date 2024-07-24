@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from janome.tokenizer import Tokenizer
 import re
 
-
 # Streamlitアプリのタイトルを設定
 st.title("リードスコアリング")
 
@@ -26,8 +25,6 @@ except KeyError:
 followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
 
 # BigQueryからデータを取得する関数
-# キャッシュを無効化
-# @st.cache_data(ttl=600)
 def run_query(query: str, _params=None):
     job_config = bigquery.QueryJobConfig()
     if _params:
@@ -44,8 +41,22 @@ def show_query_and_params(query, params):
     st.text("クエリパラメータ:")
     st.json({p.name: p.value for p in params})
 
-# ユーザーがキーワードを入力できるようにする
-organizer_keyword = st.text_input("主催企業名を入力してください：", "")
+# 主催企業名の一覧を取得する関数
+@st.cache_data(ttl=3600)
+def get_organizer_names():
+    query = f"""
+    SELECT DISTINCT Organizer_Name
+    FROM `{followdata_table}`
+    ORDER BY Organizer_Name
+    """
+    result = run_query(query)
+    return [row['Organizer_Name'] for row in result]
+
+# 主催企業名の一覧を取得
+organizer_names = get_organizer_names()
+
+# ユーザーが主催企業名を選択できるようにする
+organizer_keyword = st.selectbox("主催企業名を選択してください：", [""] + organizer_names)
 
 # カテゴリ選択を横に3つ並べる
 col1, col2, col3 = st.columns(3)
@@ -90,17 +101,9 @@ if execute_button:
     today = datetime.today()
     three_years_ago = today - timedelta(days=365*3)
 
-    # 全角・半角を統一
-    organizer_keyword_with_wildcard = f"%{organizer_keyword.replace(' ', '')}%"
-    organizer_keyword_full_width = "％" + "".join([chr(ord(c) + 65248) if ord(c) < 128 else c for c in organizer_keyword.replace(' ', '')]) + "％"
-
-    # デバッグ: キーワードの値を確認
-    st.write("organizer_keyword:", organizer_keyword_with_wildcard)
-    st.write("organizer_keyword_full:", organizer_keyword_full_width)
-
+    # クエリパラメータの設定
     query_parameters = [
-        bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
-        bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width),
+        bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword),
         bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
     ]
 
@@ -110,8 +113,7 @@ if execute_button:
         Company_Name, Organizer_Name
     FROM
         `{followdata_table}`
-    WHERE (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
-           OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
+    WHERE Organizer_Name = @organizer_keyword
     """
 
     # AND条件を追加
@@ -150,7 +152,6 @@ if execute_button:
         # フィルタリング後の企業リストを確認
         if filtered_companies:
             st.write(f"フィルタリング後の企業数: {len(filtered_companies)}")
-            # st.write("フィルタリング後の企業:", filtered_companies[:10])  # 最初の10社のみ表示
         else:
             st.warning("フィルタリング後の企業が見つかりませんでした。")
             st.stop()
@@ -166,8 +167,7 @@ if execute_button:
         all_seminars_query = f"""
         SELECT *
         FROM `{followdata_table}`
-        WHERE (LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword)
-           OR LOWER(Organizer_Name) LIKE LOWER(@organizer_keyword_full))
+        WHERE Organizer_Name = @organizer_keyword
           AND Company_Name IN UNNEST(@companies) 
           AND Seminar_Date >= @three_years_ago
         ORDER BY Company_Name, Seminar_Date
@@ -175,27 +175,13 @@ if execute_button:
 
         query_params = [
             bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
-            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword_with_wildcard),
-            bigquery.ScalarQueryParameter("organizer_keyword_full", "STRING", organizer_keyword_full_width),
+            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword),
             bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
         ]
 
         # デバッグ: all_seminars_queryとquery_paramsを表示
         st.write("all_seminars_query:", all_seminars_query)
         st.write("query_params:", query_params)
-
-        # テーブルの内容をサンプリングするクエリ
-        sample_query = f"""
-        SELECT *
-        FROM `{followdata_table}`
-        LIMIT 10
-        """
-
-        try:
-            sample_data = run_query(sample_query)
-            st.write("テーブルのサンプルデータ:", sample_data)
-        except Exception as e:
-            st.error(f"サンプルデータの取得に失敗しました: {str(e)}")
 
         try:
             all_seminars_data = run_query(all_seminars_query, query_params)
@@ -264,7 +250,6 @@ if execute_button:
             st.warning("スコア計算後の企業が見つかりませんでした。")
             st.stop()
 
-        # def generate_wordcloud(font_path, text, title):
         def generate_wordcloud(font_path, text):
             t = Tokenizer()
             tokens = t.tokenize(text)
@@ -282,20 +267,17 @@ if execute_button:
 
             fig, ax = plt.subplots(figsize=(10, 5))
             ax.imshow(wordcloud, interpolation='bilinear')
-            # ax.set_title(title)
             ax.axis('off')
             st.pyplot(fig)
 
         st.header("トップ3企業")
         for i in range(min(3, len(sorted_scores))):
             company_name, score = sorted_scores[i]
-            # st.subheader(f"{i + 1}. {company_name}: {score}点")
             st.subheader(f"{i + 1}位. {company_name}")
             
             seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
             if seminar_titles:
                 try:
-                    # generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles, f'{company_name}の関心キーワード')
                     generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
                 except Exception as e:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
