@@ -163,13 +163,14 @@ if execute_button:
         # エスケープした会社名のリストを作成
         escaped_companies = [escape_company_name(company) for company in filtered_companies]
 
-        # all_seminars_query に主催企業名による絞り込みを追加
+        # all_seminars_query に主催企業名による絞り込みを追加し、主催企業自身のセミナーを除外
         all_seminars_query = f"""
         SELECT *
         FROM `{followdata_table}`
         WHERE Organizer_Name = @organizer_keyword
           AND Company_Name IN UNNEST(@companies) 
           AND Seminar_Date >= @three_years_ago
+          AND Organizer_Name != Company_Name  -- 主催企業自身のセミナーを除外
         ORDER BY Company_Name, Seminar_Date
         """
 
@@ -275,14 +276,19 @@ if execute_button:
             company_name, score = sorted_scores[i]
             st.subheader(f"{i + 1}位. {company_name}")
             
-            seminar_titles = ' '.join([row['Seminar_Title'] for row in all_seminars_data if row['Company_Name'] == company_name])
+            # 主催企業以外のセミナータイトルのみを対象とする
+            seminar_titles = ' '.join([
+                row['Seminar_Title'] 
+                for row in all_seminars_data 
+                if row['Company_Name'] == company_name and row['Organizer_Name'] != organizer_keyword
+            ])
             if seminar_titles:
                 try:
                     generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
                 except Exception as e:
                     st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
             else:
-                st.warning(f"{company_name}のセミナータイトルが見つかりませんでした。")
+                st.warning(f"{company_name}の他社セミナー参加履歴が見つかりませんでした。")
             
             st.write("---")  # 各企業の間に区切り線を追加
 
