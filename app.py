@@ -163,20 +163,17 @@ if execute_button:
         # エスケープした会社名のリストを作成
         escaped_companies = [escape_company_name(company) for company in filtered_companies]
 
-        # all_seminars_query に主催企業名による絞り込みを追加し、主催企業自身のセミナーを除外
+        # all_seminars_query から主催企業名による絞り込みを削除
         all_seminars_query = f"""
         SELECT *
         FROM `{followdata_table}`
-        WHERE Organizer_Name = @organizer_keyword
-          AND Company_Name IN UNNEST(@companies) 
+        WHERE Company_Name IN UNNEST(@companies) 
           AND Seminar_Date >= @three_years_ago
-          AND Organizer_Name != Company_Name  -- 主催企業自身のセミナーを除外
         ORDER BY Company_Name, Seminar_Date
         """
 
         query_params = [
             bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
-            bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword),
             bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
         ]
 
@@ -210,32 +207,33 @@ if execute_button:
         st.write("Number of rows in all_seminars_data:", len(all_seminars_data))
         st.write("Unique Organizer Names:", set([row['Organizer_Name'] for row in all_seminars_data]))
 
-        def calculate_score(row):
+        def calculate_score(row, organizer_keyword):
             score = 0
-            if row['Status'] == '出席':
-                score += 3
-            if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
-                score += 3
-            if row.get('Desired_Follow_Up_Actions'):
-                if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
-                    score += 5
-                elif '資料希望' in row['Desired_Follow_Up_Actions']:
+            if row['Organizer_Name'] != organizer_keyword:  # 他社セミナーの場合のみスコアを加算
+                if row['Status'] == '出席':
                     score += 3
-            if row.get('Pre_Seminar_Survey_Answer_2'):
-                if '既に同様の商品・サービスを導入済み' in row['Pre_Seminar_Survey_Answer_2']:
+                if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
                     score += 3
-                elif '既に候補の製品・サービスを絞っており、その評価・選定をしている' in row['Pre_Seminar_Survey_Answer_2']:
-                    score += 3
-                elif '製品・サービスの候補を探している' in row['Pre_Seminar_Survey_Answer_2']:
-                    score += 2
-                elif '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）' in row['Pre_Seminar_Survey_Answer_2']:
-                    score += 1
+                if row.get('Desired_Follow_Up_Actions'):
+                    if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
+                        score += 5
+                    elif '資料希望' in row['Desired_Follow_Up_Actions']:
+                        score += 3
+                if row.get('Pre_Seminar_Survey_Answer_2'):
+                    if '既に同様の商品・サービスを導入済み' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 3
+                    elif '既に候補の製品・サービスを絞っており、その評価・選定をしている' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 3
+                    elif '製品・サービスの候補を探している' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 2
+                    elif '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 1
             return score
 
         # スコア計算
         company_scores = {}
         for row in all_seminars_data:
-            score = calculate_score(row)            
+            score = calculate_score(row, organizer_keyword)            
             company_name = row['Company_Name']
             if company_name in company_scores:
                 company_scores[company_name] += score
@@ -280,7 +278,7 @@ if execute_button:
             company_name, score = sorted_scores[i]
             st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
             
-            # 主催企業以外のセミナータイトルのみを対象とする
+            # 他社セミナーのみを対象とする
             other_seminars = [
                 row for row in all_seminars_data 
                 if row['Company_Name'] == company_name and row['Organizer_Name'] != organizer_keyword
