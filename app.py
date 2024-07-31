@@ -97,14 +97,14 @@ if execute_button:
     # キャッシュをクリア
     st.cache_data.clear()
 
-    # 3年前の日付を計算
+    # 半年前の日付を計算
     today = datetime.today()
-    three_years_ago = today - timedelta(days=365*3)
+    six_months_ago = today - timedelta(days=180)
 
     # クエリパラメータの設定
     query_parameters = [
         bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword),
-        bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
+        bigquery.ScalarQueryParameter("six_months_ago", "DATE", six_months_ago.date())
     ]
 
     # クエリを修正: 主催企業名で絞り込んだ後、ANDで業種、従業員規模、役職の絞り込みを行う
@@ -168,13 +168,13 @@ if execute_button:
         SELECT *
         FROM `{followdata_table}`
         WHERE Company_Name IN UNNEST(@companies) 
-          AND Seminar_Date >= @three_years_ago
+          AND Seminar_Date >= @six_months_ago
         ORDER BY Company_Name, Seminar_Date
         """
 
         query_params = [
             bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
-            bigquery.ScalarQueryParameter("three_years_ago", "DATE", three_years_ago.date())
+            bigquery.ScalarQueryParameter("six_months_ago", "DATE", six_months_ago.date())
         ]
 
         # デバッグ: all_seminars_queryとquery_paramsを表示
