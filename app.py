@@ -22,7 +22,7 @@ except KeyError:
     st.stop()
 
 # テーブル名を完全修飾名で指定
-followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata"
+followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata_addCode"
 
 # BigQueryからデータを取得する関数
 def run_query(query: str, _params=None):
