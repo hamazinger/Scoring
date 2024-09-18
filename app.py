@@ -281,6 +281,26 @@ def main_page():
                 st.warning("スコア計算後の企業が見つかりませんでした。")
                 st.stop()
 
+            def generate_wordcloud(font_path, text):
+                t = Tokenizer()
+                tokens = t.tokenize(text)
+                words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
+    
+                words = [word for word in words if len(word) > 1]
+                words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
+                words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
+    
+                exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
+                                 '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+                words = [word for word in words if word not in exclude_words]
+    
+                wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
+    
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.axis('off')
+                st.pyplot(fig)
+
             st.header("トップ3企業")
             for i in range(min(3, len(sorted_scores))):
                 company_name, score = sorted_scores[i]
