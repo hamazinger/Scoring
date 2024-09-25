@@ -200,9 +200,7 @@ def main_page():
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
         # Organizer_Codeを使った処理
-        if st.session_state
-
-.get('majisemi', False):
+        if st.session_state.get('majisemi', False):
             # Organizer_Codeを抽出
             organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
         else:
