@@ -178,30 +178,24 @@ def main_page():
 
         additional_conditions = []
 
-        # IT関連企業フィルタ
-        if "IT関連企業" in selected_industries:
-            it_industry_conditions = " OR ".join([f"User_Company LIKE '%{value}%'" for value in it_industry_values])
-            additional_conditions.append(f"({it_industry_conditions})")
-            selected_industries.remove("IT関連企業")  # IT関連企業は別に扱うのでリストから削除
-        
-        # 業種フィルタをOR条件で
+        # 業種フィルタをOR条件で構築
         if selected_industries:
-            other_industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
-            additional_conditions.append(f"({other_industry_conditions})")
+            industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
+            additional_conditions.append(f"({industry_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
-        
-        # 従業員規模フィルタをOR条件で
+
+        # 従業員規模フィルタをOR条件で構築
         if selected_employee_sizes:
             employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
             additional_conditions.append(f"({employee_size_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
-        
-        # 役職フィルタをOR条件で
+
+        # 役職フィルタをOR条件で構築
         if selected_positions:
             position_conditions = " OR ".join([f"Position_Category LIKE '%' || @position_{i} || '%'" for i in range(len(selected_positions))])
             additional_conditions.append(f"({position_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
-        
+
         # Organizer_Codeを使ったクエリ
         query_parameters.append(bigquery.ScalarQueryParameter("organizer_code", "STRING", organizer_code))
         organizer_filter = "Organizer_Code = @organizer_code"
@@ -209,16 +203,19 @@ def main_page():
         # クエリ構築: 各条件をANDで結合
         attendee_query = f"""
         SELECT DISTINCT
-            Company_Name, Organizer_Code
+            Company
+
+_Name, Organizer_Code
         FROM
             `{followdata_table}`
         WHERE {organizer_filter}
         """
-        
+
         # 業種、従業員規模、役職のフィルタをANDで結合
         if additional_conditions:
             attendee_query += " AND " + " AND ".join(additional_conditions)
-        
+
+        # 実行されたクエリとパラメータを表示
         show_query_and_params(attendee_query, query_parameters)
 
         try:
