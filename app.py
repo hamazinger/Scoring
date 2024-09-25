@@ -204,9 +204,7 @@ def main_page():
             organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
         else:
             group_code = st.session_state.get('group_code')
-            organizer_code = group_code  # group_code が Organizer_Code として使用され
-
-る場合
+            organizer_code = group_code  # group_code が Organizer_Code として使用される場合
             if not organizer_code:
                 st.error("Organizer_Code が見つかりませんでした。")
                 st.stop()
