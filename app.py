@@ -135,7 +135,8 @@ def main_page():
             "製造", "通信キャリア・データセンター", "商社", "小売", "金融",
             "建設・土木・設備工事", "マーケティング・広告・出版・印刷", "教育", "IT関連企業"
         ]
-        selected_industry = st.selectbox("業種を選択してください", industries)
+        # 業種を複数選択可能にする
+        selected_industries = st.multiselect("業種を選択してください", industries)
 
     with col2:
         st.subheader("従業員規模")
@@ -175,12 +176,15 @@ def main_page():
 
         additional_conditions = []
         # 業種フィルタ
-        if selected_industry == "IT関連企業":
+        if "IT関連企業" in selected_industries:
             industry_conditions = " OR ".join([f"User_Company LIKE '%{value}%'" for value in it_industry_values])
             additional_conditions.append(f"({industry_conditions})")
-        else:
-            query_parameters.append(bigquery.ScalarQueryParameter("industry", "STRING", selected_industry))
-            additional_conditions.append("User_Company LIKE '%' || @industry || '%'")
+            selected_industries.remove("IT関連企業")  # IT関連企業は別に扱うのでリストから削除
+
+        if selected_industries:
+            industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
+            additional_conditions.append(f"({industry_conditions})")
+            query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
 
         # 従業員規模フィルタ
         if selected_employee_sizes:
@@ -196,7 +200,9 @@ def main_page():
 
         if st.session_state.get('majisemi', False):
             query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword))
-            organizer_filter = "Organizer_Name = @organizer_keyword"
+            organizer_filter = "Organizer_Name = @organ
+
+izer_keyword"
         else:
             group_code = st.session_state.get('group_code')
             query_parameters.append(bigquery.ScalarQueryParameter("group_code", "STRING", group_code))
@@ -217,9 +223,7 @@ def main_page():
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
-            filtered_companies = [row['Company_Name'] for row in attendee_data if row.get
-
-('Company_Name')]
+            filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
             filtered_companies = list(set(filtered_companies))
 
             if filtered_companies:
