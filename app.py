@@ -226,7 +226,7 @@ def main_page():
 
         # IT関連企業とその他の業種条件をORで結合し、他のフィルタ条件とANDで結合
         if additional_conditions:
-            attendee_query += " AND (" + " AND ".join(additional_conditions) + ")"
+            attendee_query += " OR (" + " AND ".join(additional_conditions) + ")"
 
         show_query_and_params(attendee_query, query_parameters)
 
