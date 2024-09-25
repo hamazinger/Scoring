@@ -203,9 +203,7 @@ def main_page():
         # クエリ構築: 各条件をANDで結合
         attendee_query = f"""
         SELECT DISTINCT
-            Company
-
-_Name, Organizer_Code
+            Company_Name, Organizer_Code
         FROM
             `{followdata_table}`
         WHERE {organizer_filter}
