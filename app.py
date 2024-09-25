@@ -1,13 +1,12 @@
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
-import pandas as pd
 from datetime import datetime, timedelta
-from wordcloud import WordCloud
+import requests
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
-import requests
 
 # 認証関数
 def authenticate(username, password):
@@ -34,7 +33,7 @@ def login_page():
         st.session_state.login_checked = False
 
     if not st.session_state.login_checked:
-        col1, col2, col3 = st.columns([1,2,1])
+        col1, col2, col3 = st.columns([1, 2, 1])
 
         with col2:
             title_placeholder = st.empty()
@@ -182,7 +181,7 @@ def main_page():
             additional_conditions.append(f"({it_industry_conditions})")
             selected_industries.remove("IT関連企業")  # IT関連企業は別に扱うのでリストから削除
 
-        # その他の業種フィルタ
+        # その他の業種フィルタをOR条件で
         if selected_industries:
             other_industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
             additional_conditions.append(f"({other_industry_conditions})")
@@ -201,7 +200,9 @@ def main_page():
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
         # Organizer_Codeを使った処理
-        if st.session_state.get('majisemi', False):
+        if st.session_state
+
+.get('majisemi', False):
             # Organizer_Codeを抽出
             organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
         else:
@@ -223,7 +224,7 @@ def main_page():
         WHERE {organizer_filter}
         """
 
-        # IT関連企業とその他の業種条件をORで結合し、その他のフィルタ条件とはANDで結合
+        # IT関連企業とその他の業種条件をORで結合し、他のフィルタ条件とANDで結合
         if additional_conditions:
             attendee_query += " AND (" + " OR ".join(additional_conditions) + ")"
 
@@ -239,6 +240,82 @@ def main_page():
             else:
                 st.warning("フィルタリング後の企業が見つかりませんでした。")
                 st.stop()
+
+            def escape_company_name(name):
+                return name.replace("'", "''")
+
+            escaped_companies = [escape_company_name(company) for company in filtered_companies]
+
+            all_seminars_query = f"""
+            SELECT *
+            FROM `{followdata_table}`
+            WHERE Company_Name IN UNNEST(@companies) 
+              AND Seminar_Date >= @six_months_ago
+            ORDER BY Company_Name, Seminar_Date
+            """
+
+            query_params = [
+                bigquery.ArrayQueryParameter("companies", "STRING", escaped_companies),
+                bigquery.ScalarQueryParameter("six_months_ago", "DATE", six_months_ago.date())
+            ]
+
+            try:
+                all_seminars_data = run_query(all_seminars_query, query_params)
+            except Exception as e:
+                st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
+                st.error(f"クエリ: {all_seminars_query}")
+                st.error(f"パラメータ: {query_params}")
+                st.stop()
+
+            # ワードクラウドの生成
+            def generate_wordcloud(font_path, text):
+                t = Tokenizer()
+                tokens = t.tokenize(text)
+                words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
+    
+                words = [word for word in words if len(word) > 1]
+                words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
+                words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
+    
+                exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
+                                 '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+                words = [word for word in words if word not in exclude_words]
+    
+                wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
+    
+                fig, ax = plt.subplots(figsize=(10, 5))
+                ax.imshow(wordcloud, interpolation='bilinear')
+                ax.axis('off')
+                st.pyplot(fig)
+
+            st.header("トップ3企業")
+            for i in range(min(3, len(filtered_companies))):
+                company_name = filtered_companies[i]
+                st.subheader(f"{i + 1}位. {company_name}")
+                
+                # 他社セミナーの抽出
+                other_seminars = [
+                    row for row in all_seminars_data 
+                    if row['Company_Name'] == company_name and row['Organizer_Code'] != organizer_code
+                ]
+                
+                st.write(f"Debug: 他社セミナー参加数: {len(other_seminars)}")
+                
+                if other_seminars:
+                    seminar_titles = ' '.join([row['Seminar_Title'] for row in other_seminars])
+                    try:
+                        generate_wordcloud('NotoSansJP-Regular.ttf', seminar_titles)
+                    except Exception as e:
+                        st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
+                else:
+                    st.warning(f"{company_name}の他社セミナー参加履歴が見つかりませんでした。")
+                
+                st.write("参加セミナー詳細:")
+                company_seminars = [row for row in all_seminars_data if row['Company_Name'] == company_name]
+                for seminar in company_seminars[:5]:
+                    st.write(f"- {seminar['Seminar_Title']} (主催: {seminar['Organizer_Name']})")
+                
+                st.write("---")
 
         except Exception as e:
             st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
