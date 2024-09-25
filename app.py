@@ -195,7 +195,9 @@ def main_page():
 
         # 役職フィルタ
         if selected_positions:
-            position_conditions = " OR ".join([f"Position_Category LIKE '%' || @position_{i} || '%'" for i in range(len(selected_positions))])
+            position_conditions = " OR ".join([f"Position_Category LIKE '%' || @position_{i} || '%'" for i in range(len(selected_positions
+
+))])
             additional_conditions.append(f"({position_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
@@ -265,6 +267,42 @@ def main_page():
                 st.error(f"パラメータ: {query_params}")
                 st.stop()
 
+            # スコアの計算ロジック
+            def calculate_score(row):
+                score = 0
+                if row['Status'] == '出席':
+                    score += 3
+                if any(row.get(f'Post_Seminar_Survey_Answer_{i}', '') for i in range(1, 4)):
+                    score += 3
+                if row.get('Desired_Follow_Up_Actions'):
+                    if '製品やサービス導入に関する具体的な要望がある' in row['Desired_Follow_Up_Actions']:
+                        score += 5
+                    elif '資料希望' in row['Desired_Follow_Up_Actions']:
+                        score += 3
+                if row.get('Pre_Seminar_Survey_Answer_2'):
+                    if '既に同様の商品・サービスを導入済み' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 3
+                    elif '既に候補の製品・サービスを絞っており、その評価・選定をしている' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 3
+                    elif '製品・サービスの候補を探している' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 2
+                    elif '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）' in row['Pre_Seminar_Survey_Answer_2']:
+                        score += 1
+                return score
+
+            # スコアリングの実行
+            company_scores = {}
+            for row in all_seminars_data:
+                score = calculate_score(row)
+                company_name = row['Company_Name']
+                if company_name in company_scores:
+                    company_scores[company_name] += score
+                else:
+                    company_scores[company_name] = score
+
+            # スコア順にソート
+            sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
+
             # ワードクラウドの生成
             def generate_wordcloud(font_path, text):
                 t = Tokenizer()
@@ -287,9 +325,9 @@ def main_page():
                 st.pyplot(fig)
 
             st.header("トップ3企業")
-            for i in range(min(3, len(filtered_companies))):
-                company_name = filtered_companies[i]
-                st.subheader(f"{i + 1}位. {company_name}")
+            for i in range(min(3, len(sorted_scores))):
+                company_name, score = sorted_scores[i]
+                st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
                 
                 # 他社セミナーの抽出
                 other_seminars = [
