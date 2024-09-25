@@ -97,12 +97,13 @@ def main_page():
     @st.cache_data(ttl=3600)
     def get_organizer_names():
         query = f"""
-        SELECT DISTINCT Organizer_Name
+        SELECT Organizer_Code, MIN(Organizer_Name) AS Organizer_Name
         FROM `{followdata_table}`
+        GROUP BY Organizer_Code
         ORDER BY Organizer_Name
         """
         result = run_query(query)
-        return [row['Organizer_Name'] for row in result]
+        return [f"{row['Organizer_Name']}【{row['Organizer_Code']}】" for row in result]
 
     if st.session_state.get('majisemi', False):
         organizer_names = get_organizer_names()
@@ -111,12 +112,12 @@ def main_page():
         group_code = st.session_state.get('group_code')
         if group_code:
             query = f"""
-            SELECT DISTINCT Organizer_Name
+            SELECT DISTINCT Organizer_Name, Organizer_Code
             FROM `{followdata_table}`
             WHERE Organizer_Code = @group_code
             """
             result = run_query(query, [bigquery.ScalarQueryParameter("group_code", "STRING", group_code)])
-            organizer_name_list = [row['Organizer_Name'] for row in result]
+            organizer_name_list = [f"{row['Organizer_Name']}【{row['Organizer_Code']}】" for row in result]
             if organizer_name_list:
                 organizer_keyword = organizer_name_list[0]
                 st.write(f"主催企業名: {organizer_keyword}")
@@ -135,7 +136,6 @@ def main_page():
             "製造", "通信キャリア・データセンター", "商社", "小売", "金融",
             "建設・土木・設備工事", "マーケティング・広告・出版・印刷", "教育", "IT関連企業"
         ]
-        # 業種を複数選択可能にする
         selected_industries = st.multiselect("業種を選択してください", industries)
 
     with col2:
@@ -199,8 +199,12 @@ def main_page():
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
         if st.session_state.get('majisemi', False):
-            query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword))
-            organizer_filter = "Organizer_Name = @organizer_keyword"
+            # Organizer_Codeを抽出
+            organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
+            query_parameters.append(bigquery
+
+.ScalarQueryParameter("organizer_code", "STRING", organizer_code))
+            organizer_filter = "Organizer_Code = @organizer_code"
         else:
             group_code = st.session_state.get('group_code')
             query_parameters.append(bigquery.ScalarQueryParameter("group_code", "STRING", group_code))
@@ -208,7 +212,7 @@ def main_page():
 
         attendee_query = f"""
         SELECT DISTINCT
-            Company_Name, Organizer_Name
+            Company_Name, Organizer_Code
         FROM
             `{followdata_table}`
         WHERE {organizer_filter}
@@ -322,7 +326,7 @@ def main_page():
                 
                 other_seminars = [
                     row for row in all_seminars_data 
-                    if row['Company_Name'] == company_name and row['Organizer_Name'] != organizer_keyword
+                    if row['Company_Name'] == company_name and row['Organizer_Code'] != organizer_code
                 ]
                 
                 st.write(f"Debug: 他社セミナー参加数: {len(other_seminars)}")
