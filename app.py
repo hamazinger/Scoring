@@ -200,9 +200,7 @@ def main_page():
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
         # Organizer_Codeを使ったクエリ
-        query_parameters.append(bigquery.ScalarQueryParameter("organizer_code
-
-", "STRING", organizer_code))
+        query_parameters.append(bigquery.ScalarQueryParameter("organizer_code", "STRING", organizer_code))
         organizer_filter = "Organizer_Code = @organizer_code"
 
         # クエリ構築: 各条件をANDで結合
