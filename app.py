@@ -180,9 +180,17 @@ def main_page():
 
         # 業種フィルタをOR条件で構築
         if selected_industries:
-            industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
-            additional_conditions.append(f"({industry_conditions})")
-            query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
+            industry_conditions = []
+            for industry in selected_industries:
+                if industry == "IT関連企業":
+                    # "IT関連企業" が選択された場合は、it_industry_values の値をOR条件で追加
+                    industry_conditions.append("(" + " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(it_industry_values))]) + ")")
+                    query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", it_industry) for i, it_industry in enumerate(it_industry_values)])
+                else:
+                    industry_conditions.append(f"User_Company LIKE '%' || @industry_{len(query_parameters)} || '%'")
+                    query_parameters.append(bigquery.ScalarQueryParameter(f"industry_{len(query_parameters)}", "STRING", industry))
+            
+            additional_conditions.append("(" + " OR ".join(industry_conditions) + ")")
 
         # 従業員規模フィルタをOR条件で構築
         if selected_employee_sizes:
