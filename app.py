@@ -200,9 +200,7 @@ def main_page():
 
         if st.session_state.get('majisemi', False):
             query_parameters.append(bigquery.ScalarQueryParameter("organizer_keyword", "STRING", organizer_keyword))
-            organizer_filter = "Organizer_Name = @organ
-
-izer_keyword"
+            organizer_filter = "Organizer_Name = @organizer_keyword"
         else:
             group_code = st.session_state.get('group_code')
             query_parameters.append(bigquery.ScalarQueryParameter("group_code", "STRING", group_code))
