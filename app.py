@@ -108,6 +108,7 @@ def main_page():
     if st.session_state.get('majisemi', False):
         organizer_names = get_organizer_names()
         organizer_keyword = st.selectbox("主催企業名を選択してください：", [""] + organizer_names)
+        organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
     else:
         group_code = st.session_state.get('group_code')
         if group_code:
@@ -121,6 +122,7 @@ def main_page():
             if organizer_name_list:
                 organizer_keyword = organizer_name_list[0]
                 st.write(f"主催企業名: {organizer_keyword}")
+                organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
             else:
                 st.error("Organizer_Name が見つかりませんでした。")
                 st.stop()
@@ -190,7 +192,9 @@ def main_page():
         
         # 従業員規模フィルタをOR条件で
         if selected_employee_sizes:
-            employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
+            employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @
+
+employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
             additional_conditions.append(f"({employee_size_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
         
@@ -218,63 +222,6 @@ def main_page():
             attendee_query += " AND " + " AND ".join(additional_conditions)
         
         show_query_and_params(attendee_query, query_parameters)
-
-
-#         additional_conditions = []
-#         # IT関連企業フィルタ
-#         if "IT関連企業" in selected_industries:
-#             it_industry_conditions = " OR ".join([f"User_Company LIKE '%{value}%'" for value in it_industry_values])
-#             additional_conditions.append(f"({it_industry_conditions})")
-#             selected_industries.remove("IT関連企業")  # IT関連企業は別に扱うのでリストから削除
-
-#         # その他の業種フィルタをOR条件で
-#         if selected_industries:
-#             other_industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
-#             additional_conditions.append(f"({other_industry_conditions})")
-#             query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
-
-#         # 従業員規模フィルタ
-#         if selected_employee_sizes:
-#             employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
-#             additional_conditions.append(f"({employee_size_conditions})")
-#             query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
-
-#         # 役職フィルタ
-#         if selected_positions:
-#             position_conditions = " OR ".join([f"Position_Category LIKE '%' || @position_{i} || '%'" for i in range(len(selected_positions
-
-# ))])
-#             additional_conditions.append(f"({position_conditions})")
-#             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
-
-#         # Organizer_Codeを使った処理
-#         if st.session_state.get('majisemi', False):
-#             # Organizer_Codeを抽出
-#             organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
-#         else:
-#             group_code = st.session_state.get('group_code')
-#             organizer_code = group_code  # group_code が Organizer_Code として使用される場合
-#             if not organizer_code:
-#                 st.error("Organizer_Code が見つかりませんでした。")
-#                 st.stop()
-
-#         # Organizer_Codeを使ったクエリ
-#         query_parameters.append(bigquery.ScalarQueryParameter("organizer_code", "STRING", organizer_code))
-#         organizer_filter = "Organizer_Code = @organizer_code"
-
-#         attendee_query = f"""
-#         SELECT DISTINCT
-#             Company_Name, Organizer_Code
-#         FROM
-#             `{followdata_table}`
-#         WHERE {organizer_filter}
-#         """
-
-#         # IT関連企業とその他の業種条件をORで結合し、他のフィルタ条件とANDで結合
-#         if additional_conditions:
-#             attendee_query += " AND (" + " AND ".join(additional_conditions) + ")"
-
-#         show_query_and_params(attendee_query, query_parameters)
 
         try:
             attendee_data = run_query(attendee_query, query_parameters)
