@@ -191,7 +191,9 @@ def main_page():
         # 従業員規模フィルタ
         if selected_employee_sizes:
             employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
-            additional_conditions.append(f"({employee_size_conditions})")
+            additional_conditions
+
+.append(f"({employee_size_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
 
         # 役職フィルタ
@@ -203,9 +205,7 @@ def main_page():
         # Organizer_Codeを使った処理
         if st.session_state.get('majisemi', False):
             # Organizer_Codeを抽出
-            organizer_code = organizer_keyword.split('【')[-
-
-1].replace('】', '')
+            organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
         else:
             group_code = st.session_state.get('group_code')
             organizer_code = group_code  # group_code が Organizer_Code として使用される場合
@@ -225,9 +225,9 @@ def main_page():
         WHERE {organizer_filter}
         """
 
-        # 業種、従業員規模、役職の各条件をANDで結合
+        # IT関連企業とその他の業種条件をORで結合し、その他のフィルタ条件とはANDで結合
         if additional_conditions:
-            attendee_query += " AND (" + " AND ".join(additional_conditions) + ")"
+            attendee_query += " AND (" + " OR ".join(additional_conditions) + ")"
 
         show_query_and_params(attendee_query, query_parameters)
 
