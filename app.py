@@ -175,15 +175,16 @@ def main_page():
         ]
 
         additional_conditions = []
-        # 業種フィルタ
+        # IT関連企業フィルタ
         if "IT関連企業" in selected_industries:
-            industry_conditions = " OR ".join([f"User_Company LIKE '%{value}%'" for value in it_industry_values])
-            additional_conditions.append(f"({industry_conditions})")
+            it_industry_conditions = " OR ".join([f"User_Company LIKE '%{value}%'" for value in it_industry_values])
+            additional_conditions.append(f"({it_industry_conditions})")
             selected_industries.remove("IT関連企業")  # IT関連企業は別に扱うのでリストから削除
 
+        # その他の業種フィルタ
         if selected_industries:
-            industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
-            additional_conditions.append(f"({industry_conditions})")
+            other_industry_conditions = " OR ".join([f"User_Company LIKE '%' || @industry_{i} || '%'" for i in range(len(selected_industries))])
+            additional_conditions.append(f"({other_industry_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"industry_{i}", "STRING", industry) for i, industry in enumerate(selected_industries)])
 
         # 従業員規模フィルタ
@@ -198,10 +199,12 @@ def main_page():
             additional_conditions.append(f"({position_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
-        # Organizer_Codeを使った処理の修正
+        # Organizer_Codeを使った処理
         if st.session_state.get('majisemi', False):
             # Organizer_Codeを抽出
-            organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
+            organizer_code = organizer_keyword.split('
+
+【')[-1].replace('】', '')
         else:
             group_code = st.session_state.get('group_code')
             organizer_code = group_code  # group_code が Organizer_Code として使用される場合
@@ -221,8 +224,9 @@ def main_page():
         WHERE {organizer_filter}
         """
 
+        # 業種条件をORで結合
         if additional_conditions:
-            attendee_query += " AND (" + " AND ".join(additional_conditions) + ")"
+            attendee_query += " AND (" + " OR ".join(additional_conditions) + ")"
 
         show_query_and_params(attendee_query, query_parameters)
 
