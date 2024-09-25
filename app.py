@@ -198,17 +198,22 @@ def main_page():
             additional_conditions.append(f"({position_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"position_{i}", "STRING", position) for i, position in enumerate(selected_positions)])
 
+        # Organizer_Codeを使った処理の修正
         if st.session_state.get('majisemi', False):
             # Organizer_Codeを抽出
             organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
-            query_parameters.append(bigquery
-
-.ScalarQueryParameter("organizer_code", "STRING", organizer_code))
-            organizer_filter = "Organizer_Code = @organizer_code"
         else:
             group_code = st.session_state.get('group_code')
-            query_parameters.append(bigquery.ScalarQueryParameter("group_code", "STRING", group_code))
-            organizer_filter = "Organizer_Code = @group_code"
+            organizer_code = group_code  # group_code が Organizer_Code として使用され
+
+る場合
+            if not organizer_code:
+                st.error("Organizer_Code が見つかりませんでした。")
+                st.stop()
+
+        # Organizer_Codeを使ったクエリ
+        query_parameters.append(bigquery.ScalarQueryParameter("organizer_code", "STRING", organizer_code))
+        organizer_filter = "Organizer_Code = @organizer_code"
 
         attendee_query = f"""
         SELECT DISTINCT
