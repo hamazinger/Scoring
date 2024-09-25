@@ -1,7 +1,13 @@
 import streamlit as st
 from google.cloud import bigquery
 from google.oauth2 import service_account
+import pandas as pd
 from datetime import datetime, timedelta
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from janome.tokenizer import Tokenizer
+import re
+import requests
 
 # 認証関数
 def authenticate(username, password):
