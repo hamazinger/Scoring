@@ -192,9 +192,7 @@ def main_page():
         
         # 従業員規模フィルタをOR条件で
         if selected_employee_sizes:
-            employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @
-
-employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
+            employee_size_conditions = " OR ".join([f"Employee_Size LIKE '%' || @employee_size_{i} || '%'" for i in range(len(selected_employee_sizes))])
             additional_conditions.append(f"({employee_size_conditions})")
             query_parameters.extend([bigquery.ScalarQueryParameter(f"employee_size_{i}", "STRING", size) for i, size in enumerate(selected_employee_sizes)])
         
