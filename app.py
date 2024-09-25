@@ -65,6 +65,7 @@ def login_page():
     if st.session_state.login_checked:
         main_page()
 
+# メインページ
 def main_page():
     st.title("リードスコアリング")
 
@@ -87,6 +88,12 @@ def main_page():
         rows_raw = query_job.result()
         rows = [dict(row) for row in rows_raw]
         return rows
+
+    def show_query_and_params(query, params):
+        st.text("実行されたクエリ:")
+        st.code(query)
+        st.text("クエリパラメータ:")
+        st.json({p.name: p.value for p in params})
 
     @st.cache_data(ttl=3600)
     def get_organizer_names():
@@ -196,7 +203,9 @@ def main_page():
         # Organizer_Codeを使った処理
         if st.session_state.get('majisemi', False):
             # Organizer_Codeを抽出
-            organizer_code = organizer_keyword.split('【')[-1].replace('】', '')
+            organizer_code = organizer_keyword.split('【')[-
+
+1].replace('】', '')
         else:
             group_code = st.session_state.get('group_code')
             organizer_code = group_code  # group_code が Organizer_Code として使用される場合
@@ -216,7 +225,7 @@ def main_page():
         WHERE {organizer_filter}
         """
 
-        # 業種条件、従業員規模、役職の各条件をANDで結合
+        # 業種、従業員規模、役職の各条件をANDで結合
         if additional_conditions:
             attendee_query += " AND (" + " AND ".join(additional_conditions) + ")"
 
@@ -237,6 +246,7 @@ def main_page():
             st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
             st.stop()
 
+# メイン関数
 def main():
     if 'authenticated' not in st.session_state:
         st.session_state['authenticated'] = False
