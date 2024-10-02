@@ -37,7 +37,7 @@ def login_page():
 
         with col2:
             title_placeholder = st.empty()
-            title_placeholder.title("Lead Scoring")
+            title_placeholder.title("リードスコアリング")
             username_placeholder = st.empty()
             password_placeholder = st.empty()
             username = username_placeholder.text_input("ユーザー名")
@@ -66,7 +66,7 @@ def login_page():
 
 # メインページ
 def main_page():
-    st.title("Lead Scoring")
+    st.title("リードスコアリング")
 
     try:
         service_account_info = st.secrets["gcp_service_account"]
@@ -87,12 +87,6 @@ def main_page():
         rows_raw = query_job.result()
         rows = [dict(row) for row in rows_raw]
         return rows
-
-    def show_query_and_params(query, params):
-        st.text("実行されたクエリ:")
-        st.code(query)
-        st.text("クエリパラメータ:")
-        st.json({p.name: p.value for p in params})
 
     @st.cache_data(ttl=3600)
     def get_organizer_names():
@@ -236,17 +230,12 @@ def main_page():
         if additional_conditions:
             attendee_query += " AND " + " AND ".join(additional_conditions)
 
-        # 実行されたクエリとパラメータを表示
-        show_query_and_params(attendee_query, query_parameters)
-
         try:
             attendee_data = run_query(attendee_query, query_parameters)
             filtered_companies = [row['Company_Name'] for row in attendee_data if row.get('Company_Name')]
             filtered_companies = list(set(filtered_companies))
 
-            if filtered_companies:
-                st.write(f"フィルタリング後の企業数: {len(filtered_companies)}")
-            else:
+            if not filtered_companies:
                 st.warning("フィルタリング後の企業が見つかりませんでした。")
                 st.stop()
 
@@ -268,13 +257,7 @@ def main_page():
                 bigquery.ScalarQueryParameter("six_months_ago", "DATE", six_months_ago.date())
             ]
 
-            try:
-                all_seminars_data = run_query(all_seminars_query, query_params)
-            except Exception as e:
-                st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
-                st.error(f"クエリ: {all_seminars_query}")
-                st.error(f"パラメータ: {query_params}")
-                st.stop()
+            all_seminars_data = run_query(all_seminars_query, query_params)
 
             # スコアの計算ロジック
             def calculate_score(row):
@@ -295,7 +278,7 @@ def main_page():
                         score += 3
                     elif '製品・サービスの候補を探している' in row['Pre_Seminar_Survey_Answer_2']:
                         score += 2
-                    elif '導入するかどうか社内で検討中（課題の確認、情報収集、要件の整理、予算の検討）' in row['Pre_Seminar_Survey_Answer_2']:
+                    elif '導入するかどうか社内で検討中' in row['Pre_Seminar_Survey_Answer_2']:
                         score += 1
                 return score
 
@@ -312,22 +295,27 @@ def main_page():
             # スコア順にソート
             sorted_scores = sorted(company_scores.items(), key=lambda item: item[1], reverse=True)
 
+            if not sorted_scores:
+                st.warning("スコアリング後の企業が見つかりませんでした。")
+                st.stop()
+
             # ワードクラウドの生成
             def generate_wordcloud(font_path, text):
                 t = Tokenizer()
                 tokens = t.tokenize(text)
                 words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
-    
+        
                 words = [word for word in words if len(word) > 1]
                 words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
                 words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
-    
+        
                 exclude_words = {'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
-                                 '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
+                                 '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選',
+                                 '調査', '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', '理由', 'する', '解説', '影響', '与える'}
                 words = [word for word in words if word not in exclude_words]
-    
+        
                 wordcloud = WordCloud(font_path=font_path, background_color='white', width=800, height=400).generate(' '.join(words))
-    
+        
                 fig, ax = plt.subplots(figsize=(10, 5))
                 ax.imshow(wordcloud, interpolation='bilinear')
                 ax.axis('off')
@@ -343,8 +331,6 @@ def main_page():
                     row for row in all_seminars_data 
                     if row['Company_Name'] == company_name and row['Organizer_Code'] != organizer_code
                 ]
-                
-                st.write(f"Debug: 他社セミナー参加数: {len(other_seminars)}")
                 
                 if other_seminars:
                     seminar_titles = ' '.join([row['Seminar_Title'] for row in other_seminars])
@@ -363,7 +349,7 @@ def main_page():
                 st.write("---")
 
         except Exception as e:
-            st.error(f"BigQueryのクエリに失敗しました: {str(e)}")
+            st.error(f"エラーが発生しました: {str(e)}")
             st.stop()
 
 # メイン関数
