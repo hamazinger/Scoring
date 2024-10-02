@@ -138,7 +138,10 @@ def main_page():
             "製造", "通信キャリア・データセンター", "商社", "小売", "金融",
             "建設・土木・設備工事", "マーケティング・広告・出版・印刷", "教育", "IT関連企業"
         ]
-        selected_industries = st.multiselect("業種を選択してください", industries)
+        selected_industries = []
+        for idx, industry in enumerate(industries):
+            if st.checkbox(industry, key=f"industry_{idx}"):
+                selected_industries.append(industry)
 
     with col2:
         st.subheader("従業員規模")
@@ -147,7 +150,10 @@ def main_page():
             "300人以上500人未満", "100人以上300人未満", "30人以上100人未満",
             "10人以上30人未満", "10人未満"
         ]
-        selected_employee_sizes = st.multiselect("従業員規模を選択してください", employee_sizes)
+        selected_employee_sizes = []
+        for idx, size in enumerate(employee_sizes):
+            if st.checkbox(size, key=f"employee_size_{idx}"):
+                selected_employee_sizes.append(size)
 
     with col3:
         st.subheader("役職")
@@ -155,7 +161,10 @@ def main_page():
             "経営者・役員クラス", "事業部長/工場長クラス", "部長クラス",
             "課長クラス", "係長・主任クラス", "一般社員・職員クラス"
         ]
-        selected_positions = st.multiselect("役職を選択してください", positions)
+        selected_positions = []
+        for idx, position in enumerate(positions):
+            if st.checkbox(position, key=f"position_{idx}"):
+                selected_positions.append(position)
 
     execute_button = st.button("実行")
 
