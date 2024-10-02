@@ -324,8 +324,8 @@ def main_page():
                 ax.axis('off')
                 st.pyplot(fig)
 
-            st.header("トップ3企業")
-            for i in range(min(3, len(sorted_scores))):
+            st.header("トップ5企業")
+            for i in range(min(5, len(sorted_scores))):
                 company_name, score = sorted_scores[i]
                 st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
                 
