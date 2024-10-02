@@ -325,7 +325,7 @@ def main_page():
             for i in range(min(5, len(sorted_scores))):
                 company_name, score = sorted_scores[i]
                 # st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
-                st.subheader(f"{i + 1}位. {company_name})
+                st.subheader(f"{i + 1}位. {company_name}")
                 
                 # 他社セミナーの抽出
                 other_seminars = [
