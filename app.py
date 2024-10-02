@@ -324,7 +324,8 @@ def main_page():
             st.header("トップ5企業")
             for i in range(min(5, len(sorted_scores))):
                 company_name, score = sorted_scores[i]
-                st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
+                # st.subheader(f"{i + 1}位. {company_name} (スコア: {score})")
+                st.subheader(f"{i + 1}位. {company_name}
                 
                 # 他社セミナーの抽出
                 other_seminars = [
@@ -341,10 +342,10 @@ def main_page():
                 else:
                     st.warning(f"{company_name}の他社セミナー参加履歴が見つかりませんでした。")
                 
-                st.write("参加セミナー詳細:")
-                company_seminars = [row for row in all_seminars_data if row['Company_Name'] == company_name]
-                for seminar in company_seminars[:5]:
-                    st.write(f"- {seminar['Seminar_Title']} (主催: {seminar['Organizer_Name']})")
+                # st.write("参加セミナー詳細:")
+                # company_seminars = [row for row in all_seminars_data if row['Company_Name'] == company_name]
+                # for seminar in company_seminars[:5]:
+                #     st.write(f"- {seminar['Seminar_Title']} (主催: {seminar['Organizer_Name']})")
                 
                 st.write("---")
 
