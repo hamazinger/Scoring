@@ -8,6 +8,8 @@ from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
 
+st.set_page_config(page_title="Intent Analytics")
+
 # 認証関数
 def authenticate(username, password):
     url = 'https://majisemi.com/e/api/check_user'
