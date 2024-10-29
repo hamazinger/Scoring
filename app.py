@@ -36,7 +36,7 @@ def login_page():
 
         with col2:
             title_placeholder = st.empty()
-            title_placeholder.title("Intent Analytics")
+            title_placeholder.title("Lead Scoring")
             username_placeholder = st.empty()
             password_placeholder = st.empty()
             username = username_placeholder.text_input("ユーザー名")
@@ -64,7 +64,7 @@ def login_page():
         main_page()
 
 def main_page():
-    st.title("Intent Analytics")
+    st.title("セミナー参加傾向分析")
 
     try:
         service_account_info = st.secrets["gcp_service_account"]
@@ -87,14 +87,22 @@ def main_page():
         return rows
 
     # 検索ボックス
-    search_term = st.text_input("検索キーワードを入力してください")
+    search_term = st.text_input("企業名を入力してください（部分一致で検索されます）")
 
     if search_term:
-        # キーワードに部分一致する企業のセミナータイトルを取得
+        # 改善された検索クエリ
         search_query = f"""
         SELECT Seminar_Title
         FROM `{followdata_table}`
-        WHERE Company_Name LIKE @search_term
+        WHERE 
+            -- オリジナルの文字列で検索
+            Company_Name LIKE @search_term
+            -- 全て大文字に変換して検索
+            OR UPPER(Company_Name) LIKE UPPER(@search_term)
+            -- 全て小文字に変換して検索
+            OR LOWER(Company_Name) LIKE LOWER(@search_term)
+            -- 全角を半角に変換して検索（カタカナも含む）
+            OR NORMALIZE(Company_Name, NFKC) LIKE NORMALIZE(@search_term, NFKC)
         """
         
         query_params = [
