@@ -8,6 +8,7 @@ from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
 
+# ページ設定
 st.set_page_config(page_title="Intent Analytics")
 
 # 認証関数
@@ -92,19 +93,18 @@ def main_page():
     search_term = st.text_input("企業名を入力してください（部分一致で検索されます）")
 
     if search_term:
-        # 改善された検索クエリ
+        # 期間指定を追加した検索クエリ
         search_query = f"""
         SELECT Seminar_Title
         FROM `{followdata_table}`
         WHERE 
-            -- オリジナルの文字列で検索
-            Company_Name LIKE @search_term
-            -- 全て大文字に変換して検索
-            OR UPPER(Company_Name) LIKE UPPER(@search_term)
-            -- 全て小文字に変換して検索
-            OR LOWER(Company_Name) LIKE LOWER(@search_term)
-            -- 全角を半角に変換して検索（カタカナも含む）
-            OR NORMALIZE(Company_Name, NFKC) LIKE NORMALIZE(@search_term, NFKC)
+            (
+                Company_Name LIKE @search_term
+                OR UPPER(Company_Name) LIKE UPPER(@search_term)
+                OR LOWER(Company_Name) LIKE LOWER(@search_term)
+                OR NORMALIZE(Company_Name, NFKC) LIKE NORMALIZE(@search_term, NFKC)
+            )
+            AND Seminar_Date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
         """
         
         query_params = [
