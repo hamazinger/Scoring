@@ -36,7 +36,7 @@ def login_page():
 
         with col2:
             title_placeholder = st.empty()
-            title_placeholder.title("Lead Scoring")
+            title_placeholder.title("Intent Analytics")
             username_placeholder = st.empty()
             password_placeholder = st.empty()
             username = username_placeholder.text_input("ユーザー名")
@@ -64,7 +64,7 @@ def login_page():
         main_page()
 
 def main_page():
-    st.title("セミナー参加傾向分析")
+    st.title("Intent Analytics")
 
     try:
         service_account_info = st.secrets["gcp_service_account"]
@@ -150,8 +150,8 @@ def main_page():
             # セミナータイトルのリストを作成
             seminar_titles = [result['Seminar_Title'] for result in search_results]
             
-            # 検索結果件数を表示
-            st.write(f"検索結果: {len(seminar_titles)}件")
+            # # 検索結果件数を表示
+            # st.write(f"検索結果: {len(seminar_titles)}件")
             
             # ワードクラウドの生成と表示
             fig = generate_wordcloud(seminar_titles)
