@@ -36,7 +36,7 @@ def login_page():
 
         with col2:
             title_placeholder = st.empty()
-            title_placeholder.title("Lead Scoring")
+            title_placeholder.title("Intent Analytics")
             username_placeholder = st.empty()
             password_placeholder = st.empty()
             username = username_placeholder.text_input("ユーザー名")
@@ -64,7 +64,7 @@ def login_page():
         main_page()
 
 def main_page():
-    st.title("セミナー参加傾向分析")
+    st.title("Intent Analytics")
 
     try:
         service_account_info = st.secrets["gcp_service_account"]
