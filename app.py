@@ -150,8 +150,8 @@ def main_page():
             # セミナータイトルのリストを作成
             seminar_titles = [result['Seminar_Title'] for result in search_results]
             
-            # # 検索結果件数を表示
-            # st.write(f"検索結果: {len(seminar_titles)}件")
+            # 検索結果件数を表示
+            st.write(f"検索結果: {len(seminar_titles)}件")
             
             # ワードクラウドの生成と表示
             fig = generate_wordcloud(seminar_titles)
