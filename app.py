@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 from janome.tokenizer import Tokenizer
 import re
-import pandas as pd
 
-# 認証関数は既存のまま保持
+# 認証関数
 def authenticate(username, password):
     url = 'https://majisemi.com/e/api/check_user'
     data = {'name': username, 'pass': password}
@@ -65,10 +64,9 @@ def login_page():
         main_page()
 
 def main_page():
-    st.title("企業セミナー参加傾向分析")
+    st.title("セミナー参加傾向分析")
 
     try:
-        # BigQuery認証設定
         service_account_info = st.secrets["gcp_service_account"]
         credentials = service_account.Credentials.from_service_account_info(service_account_info)
         project_id = service_account_info["project_id"]
@@ -79,7 +77,6 @@ def main_page():
 
     followdata_table = "mythical-envoy-386309.majisemi.majisemi_followdata_addCode"
 
-    # クエリ実行関数
     def run_query(query: str, _params=None):
         job_config = bigquery.QueryJobConfig()
         if _params:
@@ -89,13 +86,13 @@ def main_page():
         rows = [dict(row) for row in rows_raw]
         return rows
 
-    # 検索ボックスの作成
-    search_term = st.text_input("企業名を入力してください")
+    # 検索ボックス
+    search_term = st.text_input("検索キーワードを入力してください")
 
     if search_term:
-        # 企業名で検索するクエリ
+        # キーワードに部分一致する企業のセミナータイトルを取得
         search_query = f"""
-        SELECT DISTINCT Company_Name, Seminar_Title
+        SELECT Seminar_Title
         FROM `{followdata_table}`
         WHERE Company_Name LIKE @search_term
         """
@@ -107,71 +104,61 @@ def main_page():
         search_results = run_query(search_query, query_params)
         
         if search_results:
-            # 検索結果の表示
-            companies = list(set([result['Company_Name'] for result in search_results]))
-            selected_company = st.selectbox(
-                "検索結果から企業を選択してください:", 
-                companies
-            )
-            
-            if selected_company:
-                # 選択された企業のセミナータイトルを取得
-                seminar_titles = [
-                    result['Seminar_Title'] 
-                    for result in search_results 
-                    if result['Company_Name'] == selected_company
-                ]
+            # ワードクラウド生成
+            def generate_wordcloud(titles):
+                # Janomeで形態素解析
+                t = Tokenizer()
+                text = ' '.join(titles)
+                tokens = t.tokenize(text)
+                words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
                 
-                # ワードクラウドの生成
-                st.subheader(f"{selected_company}のセミナー参加傾向")
+                # フィルタリング
+                words = [word for word in words if len(word) > 1]
+                words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
+                words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
                 
-                def generate_wordcloud(text):
-                    # Janomeで形態素解析
-                    t = Tokenizer()
-                    tokens = t.tokenize(text)
-                    words = [token.surface for token in tokens if token.part_of_speech.split(',')[0] in ['名詞', '動詞']]
-                    
-                    # フィルタリング
-                    words = [word for word in words if len(word) > 1]
-                    words = [word for word in words if not re.match('^[ぁ-ん]{2}$', word)]
-                    words = [word for word in words if not re.match('^[一-龠々]{1}[ぁ-ん]{1}$', word)]
-                    
-                    # 除外ワード
-                    exclude_words = {
-                        'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', 
-                        '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
-                        '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', 
-                        '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', 
-                        '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', 
-                        '理由', 'する', '解説', '影響', '与える'
-                    }
-                    words = [word for word in words if word not in exclude_words]
-                    
-                    try:
-                        # ワードクラウドの生成
-                        wordcloud = WordCloud(
-                            font_path='NotoSansJP-Regular.ttf',
-                            background_color='white',
-                            width=800,
-                            height=400
-                        ).generate(' '.join(words))
-                        
-                        fig, ax = plt.subplots(figsize=(10, 5))
-                        ax.imshow(wordcloud, interpolation='bilinear')
-                        ax.axis('off')
-                        st.pyplot(fig)
-                    except Exception as e:
-                        st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
+                # 除外ワード
+                exclude_words = {
+                    'ギフト', 'ギフトカード', 'サービス', 'できる', 'ランキング', '可能', 
+                    '課題', '会員', '会社', '開始', '開発', '活用', '管理', '企業', '機能',
+                    '記事', '技術', '業界', '後編', '公開', '最適', '支援', '事業', '実現', 
+                    '重要', '世界', '成功', '製品', '戦略', '前編', '対策', '抽選', '調査', 
+                    '提供', '投資', '導入', '発表', '必要', '方法', '目指す', '問題', '利用', 
+                    '理由', 'する', '解説', '影響', '与える'
+                }
+                words = [word for word in words if word not in exclude_words]
+                
+                if not words:
+                    return None
 
-                # セミナータイトルを結合してワードクラウドを生成
-                all_titles = ' '.join(seminar_titles)
-                generate_wordcloud(all_titles)
-                
-                # セミナー参加履歴の表示（オプション）
-                if st.checkbox("セミナー参加履歴を表示"):
-                    st.write("参加セミナー一覧:")
-                    for title in seminar_titles:
-                        st.write(f"- {title}")
+                try:
+                    wordcloud = WordCloud(
+                        font_path='NotoSansJP-Regular.ttf',
+                        background_color='white',
+                        width=800,
+                        height=400
+                    ).generate(' '.join(words))
+                    
+                    fig, ax = plt.subplots(figsize=(10, 5))
+                    ax.imshow(wordcloud, interpolation='bilinear')
+                    ax.axis('off')
+                    return fig
+                except Exception as e:
+                    st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
+                    return None
+
+            # セミナータイトルのリストを作成
+            seminar_titles = [result['Seminar_Title'] for result in search_results]
+            
+            # 検索結果件数を表示
+            st.write(f"検索結果: {len(seminar_titles)}件")
+            
+            # ワードクラウドの生成と表示
+            fig = generate_wordcloud(seminar_titles)
+            if fig:
+                st.pyplot(fig)
+            else:
+                st.warning("ワードクラウドを生成できる有効な単語が見つかりませんでした。")
         else:
             st.warning("検索結果が見つかりませんでした。")
 
